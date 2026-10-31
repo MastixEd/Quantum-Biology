@@ -1,0 +1,2507 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUANTUM BIOLOGY // Subatomic Life</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        :root {
+            --accent: #00f5d4;
+            --accent-glow: rgba(0, 245, 212, 0.35);
+            --bg-dark: #030712;
+        }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            font-family: 'Inter', sans-serif;
+            color: #f8fafc;
+        }
+        .font-display {
+            font-family: 'Syne', sans-serif;
+        }
+        .font-mono-tech {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Glassmorphism HUD */
+        .glass-panel {
+            background: rgba(10, 15, 30, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+        .glass-pill {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-pill:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+        .glass-pill.active {
+            background: linear-gradient(135deg, rgba(0, 245, 212, 0.2), rgba(59, 130, 246, 0.2));
+            border-color: var(--accent);
+            box-shadow: 0 0 25px var(--accent-glow);
+        }
+        /* Custom Range Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 12px var(--accent);
+            border: 2px solid #ffffff;
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        /* Cinematic Scanline & Vignette overlay */
+        .cinematic-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
+            background: radial-gradient(circle at center, transparent 55%, rgba(2, 6, 23, 0.85) 100%);
+        }
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 3;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0.15));
+            background-size: 100% 4px;
+            opacity: 0.35;
+        }
+        /* 3D Floating Node Labels */
+        .node-label {
+            position: absolute;
+            pointer-events: auto;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 10;
+        }
+        .node-label:hover .node-dot {
+            transform: scale(1.35);
+            box-shadow: 0 0 20px var(--accent);
+        }
+        /* Sound wave animation */
+        @keyframes pulse-bar {
+            0%, 100% { height: 4px; }
+            50% { height: 16px; }
+        }
+        .sound-bar {
+            width: 3px;
+            background: var(--accent);
+            border-radius: 99px;
+            transition: height 0.2s ease;
+        }
+        .playing .sound-bar:nth-child(1) { animation: pulse-bar 0.8s infinite 0.1s; }
+        .playing .sound-bar:nth-child(2) { animation: pulse-bar 0.6s infinite 0.3s; }
+        .playing .sound-bar:nth-child(3) { animation: pulse-bar 0.9s infinite 0.0s; }
+        .playing .sound-bar:nth-child(4) { animation: pulse-bar 0.7s infinite 0.2s; }
+
+        /* Scrollbar inside info panel */
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 99px;
+        }
+        /* Kids Mode playful highlight */
+        body.kids-mode .kids-glow {
+            box-shadow: 0 0 30px rgba(250, 204, 21, 0.25);
+            border-color: rgba(250, 204, 21, 0.45);
+        }
+        .glossary-card {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.25s ease;
+        }
+        .glossary-card:hover {
+            border-color: var(--accent);
+            background: rgba(15, 23, 42, 0.9);
+            transform: translateY(-2px);
+        }
+        @keyframes telemetry-flash {
+            0% { box-shadow: 0 0 0px var(--accent), inset 0 0 0px var(--accent); }
+            25% { box-shadow: 0 0 40px var(--accent), inset 0 0 22px var(--accent); border-color: var(--accent); }
+            100% { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+        }
+        .telemetry-active-glow {
+            animation: telemetry-flash 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-color: var(--accent) !important;
+        }
+    </style>
+</head>
+<body class="relative select-none">
+
+    <!-- 3D WebGL Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Cinematic Post-Process Overlays -->
+    <div class="cinematic-overlay"></div>
+    <div class="scanlines"></div>
+
+    <!-- 3D Projected Interactive Labels Container -->
+    <div id="labels-container" class="fixed inset-0 pointer-events-none z-10 overflow-hidden"></div>
+
+    <!-- Interactive Searchable Quantum Biology Glossary Modal -->
+    <div id="glossary-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-950/80 backdrop-blur-xl p-3 md:p-6 transition-opacity duration-300">
+        <div class="glass-panel max-w-5xl w-full max-h-[88vh] rounded-3xl flex flex-col overflow-hidden border border-teal-500/30 shadow-2xl">
+            <!-- Modal Header -->
+            <div class="p-4 md:p-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-4 bg-slate-900/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-slate-950 shadow-lg shadow-teal-500/20">
+                        <i class="ph-bold ph-book-open-text text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-display text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+                            <span>Quantum Biology Glossary</span>
+                            <span id="glossary-count-badge" class="text-xs font-mono-tech px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">20 Terms</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Every term explained for both <span class="text-teal-300 font-medium">Biophysicists</span> & <span class="text-amber-300 font-medium">9-Year-Old Explorers</span></p>
+                    </div>
+                </div>
+
+                <button onclick="toggleGlossary(false)" class="glass-pill px-3.5 py-2 rounded-xl text-xs font-mono-tech text-slate-300 hover:text-white flex items-center gap-1.5">
+                    <i class="ph-bold ph-x text-sm"></i>
+                    <span>CLOSE [ESC]</span>
+                </button>
+            </div>
+
+            <!-- Search & Category Filter Bar -->
+            <div class="p-4 border-b border-white/10 bg-slate-950/40 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <div class="relative flex-1">
+                    <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                    <input
+                        type="text"
+                        id="glossary-search"
+                        oninput="renderGlossaryItems()"
+                        placeholder="Search chromophore, exciton / edition, chirality, cryptochrome-4, singlet-triplet..."
+                        class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border border-white/15 text-xs md:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-400 transition-colors"
+                    >
+                </div>
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                    <button onclick="setGlossaryFilter('all')" id="g-filter-all" class="glass-pill active px-3 py-2 rounded-xl text-xs font-mono-tech whitespace-nowrap">All Terms</button>
+                    <button onclick="setGlossaryFilter('photosynthesis')" id="g-filter-photosynthesis" class="glass-pill px-3 py-2 rounded-xl text-xs font-mono-tech whitespace-nowrap text-teal-300">🌱 Ch.1 Photosynthesis</button>
+                    <button onclick="setGlossaryFilter('tunneling')" id="g-filter-tunneling" class="glass-pill px-3 py-2 rounded-xl text-xs font-mono-tech whitespace-nowrap text-amber-300">⚡ Ch.2 Tunneling</button>
+                    <button onclick="setGlossaryFilter('compass')" id="g-filter-compass" class="glass-pill px-3 py-2 rounded-xl text-xs font-mono-tech whitespace-nowrap text-indigo-300">🧭 Ch.3 Bird Compass</button>
+                    <button onclick="setGlossaryFilter('fundamentals')" id="g-filter-fundamentals" class="glass-pill px-3 py-2 rounded-xl text-xs font-mono-tech whitespace-nowrap text-pink-300">⚛️ Quantum Core</button>
+                </div>
+            </div>
+
+            <!-- Glossary Cards Grid -->
+            <div id="glossary-grid" class="p-4 md:p-6 overflow-y-auto custom-scroll grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Intro Splash Screen Modal (Initializes Web Audio API & Experience) -->
+    <div id="intro-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xl transition-opacity duration-700 p-4">
+        <div class="max-w-xl w-full glass-panel rounded-3xl p-8 md:p-10 text-center border border-teal-500/30 relative overflow-hidden">
+            <div class="absolute -top-24 -left-24 w-56 h-56 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -right-24 w-56 h-56 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/10 border border-teal-400/30 text-teal-300 text-xs font-mono-tech uppercase tracking-widest mb-4">
+                <i class="ph-fill ph-atom animate-spin" style="animation-duration: 8s;"></i>
+                Interactive 3D Audiovisual Anthology
+            </div>
+
+            <h1 class="font-display text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-3">
+                QUANTUM <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-cyan-400 to-indigo-400">BIOLOGY</span>
+            </h1>
+
+            <p class="text-slate-300 text-sm md:text-base leading-relaxed mb-6">
+                Discover how living cells use <span class="text-teal-300 font-medium">superposition</span>, <span class="text-amber-300 font-medium">quantum tunneling</span>, and <span class="text-indigo-300 font-medium">entangled spins</span> to power life! Choose your adventure mode below:
+            </p>
+
+            <!-- Audience Selector on Splash Screen -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="setAudienceMode(false)" id="splash-mode-sci" class="p-3.5 rounded-2xl border border-teal-400 bg-teal-500/15 text-left transition-all">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-lg">🔬</span>
+                        <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-teal-500/30 text-teal-200">DEFAULT</span>
+                    </div>
+                    <div class="font-bold text-sm text-white">Scientist Mode</div>
+                    <div class="text-[11px] text-slate-300">Full biophysics terminology, equations & telemetry</div>
+                </button>
+                <button onclick="setAudienceMode(true)" id="splash-mode-kids" class="p-3.5 rounded-2xl border border-white/15 bg-white/5 text-left hover:border-amber-400/60 transition-all">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-lg">🚀</span>
+                        <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-amber-500/30 text-amber-200">AGE 9+</span>
+                    </div>
+                    <div class="font-bold text-sm text-white">Explorer Kids Mode</div>
+                    <div class="text-[11px] text-slate-300">Fun stories, ghost shortcuts & interactive missions!</div>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mb-6 text-left">
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <div class="text-teal-400 font-mono-tech text-xs mb-1">01 // FMO COMPLEX</div>
+                    <div class="text-xs text-slate-300 font-medium">Photosynthetic Coherence</div>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <div class="text-amber-400 font-mono-tech text-xs mb-1">02 // CATALYSIS</div>
+                    <div class="text-xs text-slate-300 font-medium">Enzymatic Proton Tunneling</div>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <div class="text-indigo-400 font-mono-tech text-xs mb-1">03 // CRYPTOCHROME</div>
+                    <div class="text-xs text-slate-300 font-medium">Avian Spin Compass</div>
+                </div>
+            </div>
+
+            <button id="start-experience-btn" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-teal-400 via-cyan-500 to-indigo-500 text-slate-950 font-bold text-base tracking-wide shadow-lg shadow-teal-500/25 hover:shadow-teal-400/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3">
+                <i class="ph-fill ph-speaker-high text-xl"></i>
+                <span>ENTER QUANTUM REALM (AUDIO ON)</span>
+            </button>
+
+            <button id="start-muted-btn" class="mt-3 text-xs text-slate-400 hover:text-white font-mono-tech tracking-wider uppercase transition-colors py-1">
+                Continue without sound
+            </button>
+        </div>
+    </div>
+
+    <!-- Top Navigation & Telemetry Header -->
+    <header class="fixed top-0 left-0 right-0 z-20 p-2.5 md:p-4 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        <!-- Brand Logo -->
+        <div class="glass-panel px-3.5 py-2 rounded-2xl flex items-center gap-2.5 pointer-events-auto">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-400 to-indigo-600 flex items-center justify-center shadow-md shadow-teal-500/20">
+                <i class="ph-bold ph-wave-sine text-slate-950 text-lg"></i>
+            </div>
+            <div>
+                <div class="font-display font-bold text-sm tracking-wider text-white flex items-center gap-1.5">
+                    <span>Q-BIO</span>
+                    <span id="edition-badge" class="text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">SCIENTIST ED.</span>
+                </div>
+                <div class="text-[10px] text-slate-400 font-mono-tech hidden xl:block">SUBATOMIC BIOPHYSICS VISUALIZER</div>
+            </div>
+        </div>
+
+        <!-- Chapter Switcher Pills -->
+        <nav class="flex items-center gap-1 md:gap-1.5 pointer-events-auto bg-slate-950/60 p-1.5 rounded-2xl border border-white/10 backdrop-blur-xl">
+            <button onclick="switchScene(0)" id="nav-btn-0" class="glass-pill active px-2.5 md:px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-400 shadow-[0_0_8px_#2dd4bf]"></span>
+                <span id="nav-label-0">01 Photosynthesis</span>
+            </button>
+            <button onclick="switchScene(1)" id="nav-btn-1" class="glass-pill px-2.5 md:px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+                <span id="nav-label-1">02 Enzyme Tunneling</span>
+            </button>
+            <button onclick="switchScene(2)" id="nav-btn-2" class="glass-pill px-2.5 md:px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]"></span>
+                <span id="nav-label-2">03 Avian Compass</span>
+            </button>
+        </nav>
+
+        <!-- Audience Mode Switcher, Glossary & Audio Controls -->
+        <div class="flex items-center gap-1.5 md:gap-2 pointer-events-auto">
+            <!-- Kids vs Scientist Mode Toggle -->
+            <button id="mode-toggle-btn" onclick="toggleAudienceMode()" class="glass-pill px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border-amber-400/50 bg-gradient-to-r from-amber-500/15 to-teal-500/15 hover:scale-[1.02] transition-all" title="Switch between Scientist Mode and 9-Year-Old Explorer Kids Mode">
+                <span id="mode-icon" class="text-base">🚀</span>
+                <div class="text-left leading-none">
+                    <div class="text-[9px] font-mono-tech uppercase text-amber-300">SWITCH MODE</div>
+                    <div id="mode-btn-label" class="text-xs text-white font-bold">Kids (9+) Mode</div>
+                </div>
+            </button>
+
+            <!-- Glossary Button -->
+            <button onclick="toggleGlossary(true)" class="glass-pill px-3 py-2.5 rounded-xl text-xs font-mono-tech flex items-center gap-1.5 text-teal-200 border-teal-400/40 hover:bg-teal-500/20" title="Open Quantum Biology Dictionary & Glossary">
+                <i class="ph-bold ph-book-bookmark text-base text-teal-300"></i>
+                <span class="hidden sm:inline font-semibold">GLOSSARY</span>
+            </button>
+
+            <button id="autopilot-btn" onclick="toggleAutoOrbit()" class="glass-pill px-2.5 py-2.5 rounded-xl text-xs font-mono-tech flex items-center gap-1.5 text-teal-300 border-teal-500/40" title="Toggle Cinematic Camera Orbit">
+                <i class="ph-bold ph-video-camera"></i>
+                <span class="hidden 2xl:inline">ORBIT: AUTO</span>
+            </button>
+
+            <button id="audio-toggle-btn" onclick="toggleAudio()" class="glass-pill px-3 py-2.5 rounded-xl text-xs font-mono-tech flex items-center gap-2" title="Toggle Procedural Soundscape">
+                <div id="sound-wave-indicator" class="flex items-end gap-0.5 h-4">
+                    <div class="sound-bar h-1.5"></div>
+                    <div class="sound-bar h-3"></div>
+                    <div class="sound-bar h-2"></div>
+                    <div class="sound-bar h-3.5"></div>
+                </div>
+                <span id="audio-status-text" class="hidden md:inline text-slate-200">SYNTH</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Interactive HUD Overlay -->
+    <main class="fixed inset-0 z-10 pointer-events-none flex flex-col justify-between p-3 md:p-6 pt-20 md:pt-24 pb-4 md:pb-6">
+        
+        <!-- Middle Row: Left Scientific Dossier + Right Quantum Telemetry -->
+        <div class="flex flex-col lg:flex-row items-start justify-between gap-4 my-auto max-h-[76vh]">
+            
+            <!-- Left Panel: Scientific Context & Interactive Controls -->
+            <section id="science-panel" class="glass-panel kids-glow w-full lg:w-[420px] rounded-3xl p-5 md:p-6 pointer-events-auto flex flex-col max-h-[70vh] overflow-y-auto custom-scroll transition-all duration-500">
+                <!-- Scene Tag & Scale -->
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <span id="scene-tag" class="text-[11px] font-mono-tech uppercase tracking-widest px-2.5 py-0.5 rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                        CHLOROBACULUM TEPIDUM
+                    </span>
+                    <span id="scene-scale" class="text-[11px] font-mono-tech text-slate-400 flex items-center gap-1">
+                        <i class="ph ph-ruler"></i> SCALE: 2.5 nm
+                    </span>
+                </div>
+
+                <!-- Title -->
+                <h2 id="scene-title" class="font-display text-2xl md:text-3xl font-bold text-white leading-tight mb-1.5">
+                    Quantum Coherence in Photosynthesis
+                </h2>
+
+                <!-- Subtitle -->
+                <p id="scene-subtitle" class="text-xs md:text-sm text-teal-300/90 font-medium mb-3">
+                    Exciton Wave-Packet Superposition in the FMO Complex
+                </p>
+
+                <!-- Scientific / Kid-Friendly Explanation -->
+                <div id="scene-description" class="text-xs md:text-sm text-slate-300 leading-relaxed space-y-2.5 mb-4 border-y border-white/10 py-3.5">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Kid Explorer Mission Box (Visible in Kids Mode) -->
+                <div id="kids-mission-box" class="hidden mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-teal-500/15 border border-amber-400/40">
+                    <div class="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-wider mb-1">
+                        <span>🕵️‍♂️</span>
+                        <span id="kids-mission-title">EXPLORER MISSION // TRY THIS!</span>
+                    </div>
+                    <p id="kids-mission-text" class="text-xs text-slate-200 leading-relaxed"></p>
+                </div>
+
+                <!-- Interactive Parameter Sliders -->
+                <div class="space-y-4 mb-4 bg-slate-950/50 p-4 rounded-2xl border border-white/5">
+                    <div class="flex items-center justify-between text-xs font-mono-tech text-slate-300 mb-1">
+                        <span class="flex items-center gap-1.5">
+                            <i class="ph-fill ph-sliders text-teal-400"></i>
+                            <span id="slider-1-label">THERMAL NOISE / DECOHERENCE</span>
+                        </span>
+                        <span id="slider-1-val" class="text-teal-300 font-bold">15%</span>
+                    </div>
+                    <input type="range" id="param-slider-1" min="0" max="100" value="15" oninput="updateSimulationParams()">
+                    <p id="slider-1-hint" class="text-[11px] text-slate-400 leading-tight">
+                        Low noise preserves wavelike superposition across all 7 chromophores. High noise collapses the wave into slow random hopping.
+                    </p>
+
+                    <div class="pt-2 border-t border-white/5">
+                        <div class="flex items-center justify-between text-xs font-mono-tech text-slate-300 mb-1">
+                            <span class="flex items-center gap-1.5">
+                                <i class="ph-fill ph-gauge text-teal-400"></i>
+                                <span id="slider-2-label">PHOTON EXCITATION FLUX</span>
+                            </span>
+                            <span id="slider-2-val" class="text-teal-300 font-bold">70%</span>
+                        </div>
+                        <input type="range" id="param-slider-2" min="10" max="100" value="70" oninput="updateSimulationParams()">
+                    </div>
+                </div>
+
+                <!-- Interactive Action Button -->
+                <button id="action-trigger-btn" onclick="triggerQuantumPulse()" class="w-full py-3 px-4 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/50 text-teal-200 font-mono-tech text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-500/10 active:scale-[0.98]">
+                    <i class="ph-fill ph-lightning text-base text-teal-300"></i>
+                    <span id="action-btn-text">INJECT FEMTOSECOND PHOTON PULSE</span>
+                </button>
+            </section>
+
+            <!-- Right Panel: Live Quantum Telemetry & Oscilloscope -->
+            <aside id="telemetry-panel" class="glass-panel w-full lg:w-80 rounded-3xl p-4 md:p-5 pointer-events-auto flex flex-col gap-3.5 transition-all duration-300">
+                <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+                    <span class="font-mono-tech text-[11px] uppercase tracking-wider text-slate-300 flex items-center gap-1.5 font-semibold">
+                        <span id="telemetry-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        QUANTUM TELEMETRY
+                    </span>
+                    <div class="flex items-center gap-1.5">
+                        <span id="pulse-counter-badge" class="font-mono-tech text-[10px] px-2 py-0.5 rounded bg-white/10 text-slate-300 border border-white/10">PULSES: 0</span>
+                        <span id="telemetry-time" class="font-mono-tech text-[11px] text-teal-300">τ = 420 fs</span>
+                    </div>
+                </div>
+
+                <!-- Live Excitation Status Banner -->
+                <div id="telemetry-status-banner" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-between transition-all duration-300">
+                    <span id="telemetry-status-text" class="font-mono-tech text-[10px] tracking-wider uppercase text-slate-400 font-semibold">
+                        IDLE // STEADY STATE
+                    </span>
+                    <span id="telemetry-burst-pct" class="font-mono-tech text-[10px] text-teal-300 font-bold">0% EXCITATION</span>
+                </div>
+
+                <!-- Real-Time Wavefunction / Probability Canvas -->
+                <div id="osc-container" class="relative h-32 w-full bg-slate-950/85 rounded-xl border border-white/10 overflow-hidden p-2.5 transition-colors duration-300">
+                    <div class="text-[10px] font-mono-tech text-slate-400 flex justify-between mb-1 relative z-10">
+                        <span id="osc-label">|Ψ(x,t)|² COHERENCE</span>
+                        <span id="osc-freq" class="text-teal-400 font-bold">650 THz</span>
+                    </div>
+                    <canvas id="telemetry-canvas" class="w-full h-20"></canvas>
+                </div>
+
+                <!-- Live Metric Readouts (3 Dynamic Channels) -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div id="metric-card-1" class="bg-white/5 rounded-xl p-2.5 border border-white/5 transition-all duration-300">
+                        <div id="metric-1-name" class="text-[9px] font-mono-tech text-slate-400 uppercase truncate">QUANTUM YIELD</div>
+                        <div id="metric-1-val" class="text-sm md:text-base font-mono-tech font-bold text-teal-300 mt-0.5">98.4%</div>
+                    </div>
+                    <div id="metric-card-2" class="bg-white/5 rounded-xl p-2.5 border border-white/5 transition-all duration-300">
+                        <div id="metric-2-name" class="text-[9px] font-mono-tech text-slate-400 uppercase truncate">SUPERPOSITION</div>
+                        <div id="metric-2-val" class="text-sm md:text-base font-mono-tech font-bold text-white mt-0.5">7 STATES</div>
+                    </div>
+                    <div id="metric-card-3" class="bg-white/5 rounded-xl p-2.5 border border-white/5 transition-all duration-300">
+                        <div id="metric-3-name" class="text-[9px] font-mono-tech text-slate-400 uppercase truncate">EXCITON FLUX</div>
+                        <div id="metric-3-val" class="text-sm md:text-base font-mono-tech font-bold text-amber-300 mt-0.5">1.0x</div>
+                    </div>
+                </div>
+
+                <!-- Clicked Node Inspector Box -->
+                <div id="inspector-box" class="bg-gradient-to-br from-teal-950/50 to-slate-900/60 rounded-xl p-3 border border-teal-500/30 transition-all duration-300">
+                    <div class="text-[10px] font-mono-tech text-teal-300 uppercase tracking-wider mb-1 flex items-center gap-1">
+                        <i class="ph-fill ph-crosshair"></i>
+                        <span id="inspector-title">BChl-a CHROMOPHORE #3</span>
+                    </div>
+                    <p id="inspector-desc" class="text-[11px] text-slate-300 leading-snug">
+                        Click or tap any glowing 3D structure or floating tag in the viewport to inspect its subatomic role.
+                    </p>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Bottom Bar: Interactive Hint & Scene Progress -->
+        <footer class="flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none">
+            <div class="glass-panel px-3.5 py-1.5 rounded-full text-[11px] font-mono-tech text-slate-300 flex items-center gap-3 pointer-events-auto">
+                <span class="flex items-center gap-1 text-teal-300">
+                    <i class="ph-bold ph-hand-grabbing"></i> Drag to Orbit
+                </span>
+                <span class="opacity-30">|</span>
+                <span class="flex items-center gap-1">
+                    <i class="ph-bold ph-magnifying-glass-plus"></i> Scroll to Zoom
+                </span>
+                <span class="opacity-30 hidden md:inline">|</span>
+                <button onclick="toggleGlossary(true)" class="hidden md:flex items-center gap-1 text-amber-300 hover:underline">
+                    <i class="ph-bold ph-book-open"></i> Need a word defined? Open Glossary
+                </button>
+            </div>
+
+            <div class="glass-panel px-4 py-1.5 rounded-full text-[11px] font-mono-tech text-slate-400 pointer-events-auto flex items-center gap-2">
+                <span id="equation-prefix">EQUATION:</span>
+                <span id="equation-readout" class="text-teal-300 font-semibold">iℏ ∂|Ψ⟩/∂t = Ĥ|Ψ⟩</span>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        /***********************************************************************
+         * 1. SCIENTIFIC & 9-YEAR-OLD KID-FRIENDLY CONTENT + GLOSSARY DATABASE
+         ***********************************************************************/
+        let isKidsMode = false;
+        let currentGlossaryFilter = 'all';
+
+        const SCENES_DATA = [
+            {
+                id: 0,
+                accent: '#00f5d4',
+                accentHex: 0x00f5d4,
+                navLabelSci: '01 Photosynthesis',
+                navLabelKids: '🌱 01 Solar Super-Highway',
+                tag: 'CHLOROBACULUM TEPIDUM // FMO',
+                kidsTag: '🌱 PLANT & BACTERIA SUPERPOWER',
+                scale: 'SCALE: 2.4 nm',
+                kidsScale: 'SIZE: 40,000x thinner than a hair!',
+                title: 'Quantum Coherence in Photosynthesis',
+                kidsTitle: "Nature's Solar Super-Highway",
+                subtitle: 'Exciton Wave-Packet Superposition in the FMO Complex',
+                kidsSubtitle: 'How plants & bacteria use a quantum clone trick so sunlight never gets lost!',
+                description: `
+                    <p>When a photon strikes a photosynthetic antenna, it creates an <strong class="text-white">exciton</strong> (an energy packet) that must navigate a network of 7 <strong class="text-teal-300">bacteriochlorophyll</strong> chromophores to reach the cellular Reaction Center.</p>
+                    <p>Instead of hopping randomly like a classical particle and losing energy as heat, the exciton enters a <strong class="text-teal-300">quantum superposition</strong>—simultaneously sampling all pathways as a coherent wave to achieve near-100% energy transfer efficiency in femtoseconds.</p>
+                `,
+                kidsDescription: `
+                    <p>Imagine you catch a glowing ball of sunlight (<strong class="text-teal-300">an Exciton</strong>) and need to deliver it through a giant 7-island maze (<strong class="text-white">Chromophores</strong>) before its battery runs out!</p>
+                    <p>If you guessed which bridge to cross one by one, you'd get lost. Instead, plants use a quantum superpower called <strong class="text-amber-300">Superposition</strong>: the sunlight ball turns into a magic ripple wave that travels down <strong class="text-teal-300">ALL roads at the exact same time</strong> and picks the fastest winner!</p>
+                `,
+                kidsMission: 'Slide the "Jiggly Heat" slider all the way to 100% and watch the green islands shake! When it gets too noisy, the magic wave breaks. Now slide it back to 0% and press the big button to launch a super-wave!',
+                slider1Label: 'THERMAL DECOHERENCE NOISE',
+                kidsSlider1Label: '🌡️ JIGGLY HEAT NOISE (DECOHERENCE)',
+                slider1ValSuffix: '%',
+                slider1Default: 15,
+                slider1Hint: 'Low thermal noise preserves quantum wave coherence across all 7 chromophores. High noise collapses the wave into inefficient random hopping.',
+                kidsSlider1Hint: 'Keep the shake low so the quantum wave can stay in 7 places at once! Too much heat shaking breaks the wave.',
+                slider2Label: 'PHOTON EXCITATION FLUX',
+                kidsSlider2Label: '☀️ SUNLIGHT SPEED BOOST',
+                slider2Default: 75,
+                actionBtnText: 'INJECT FEMTOSECOND PHOTON PULSE',
+                kidsActionBtnText: '✨ BLAST A SUNLIGHT ENERGY WAVE!',
+                telemetryTime: 'τ = 660 fs',
+                oscLabel: '|Ψ(t)|² QUANTUM BEAT',
+                kidsOscLabel: '🌊 MAGIC WAVE RIPPLE METER',
+                oscFreq: '612 THz',
+                metric1Name: 'QUANTUM YIELD',
+                kidsMetric1Name: 'SUNLIGHT SAVED',
+                metric2Name: 'COHERENT PATHS',
+                kidsMetric2Name: 'PATHS AT ONCE',
+                metric3Name: 'EXCITON FLUX',
+                kidsMetric3Name: 'WAVE POWER',
+                activeStatusSci: '⚡ PHOTON EXCITON BURST ACTIVE',
+                activeStatusKids: '☀️ SUPER SUNLIGHT WAVE SURFING!',
+                equation: 'ρ̇ = -i/ℏ [H, ρ] + L_dephasing(ρ)',
+                kidsEquation: 'Superposition = All 7 Roads Explored Together!',
+                cameraPos: { x: 0, y: 5, z: 22 },
+                nodes: [
+                    {
+                        pos: [-6.5, 4.2, 1.5],
+                        title: 'Antenna BChl #1 (Entry)',
+                        kidsTitle: '☀️ Island #1: Sunlight Catcher',
+                        desc: 'Receives initial solar photon excitation from the chlorosome antenna at 800 nm wavelength.',
+                        kidsDesc: 'This chromophore molecule is like a baseball mitt that catches a beam of sunlight and turns it into an Exciton energy ball!'
+                    },
+                    {
+                        pos: [0.5, 0.8, 2.2],
+                        title: 'Superposition Hub (BChl #4)',
+                        kidsTitle: '🌊 Island #4: Wave Clone Hub',
+                        desc: 'Quantum beat oscillations allow the exciton wave-packet to interfere constructively along the fastest route.',
+                        kidsDesc: 'Here the energy wave is in multiple places at once! Slow paths cancel out and the fastest path glows bright.'
+                    },
+                    {
+                        pos: [0.0, -5.5, 0.0],
+                        title: 'Reaction Center Sink (BChl #3)',
+                        kidsTitle: '🔋 Island #3: Cell Battery Charger',
+                        desc: 'Lowest energy trap where coherent exciton energy is locked in for ATP chemical synthesis.',
+                        kidsDesc: 'Touchdown! Nearly 100% of the sunlight arrives here safely so the cell can make food and oxygen.'
+                    }
+                ]
+            },
+            {
+                id: 1,
+                accent: '#f59e0b',
+                accentHex: 0xf59e0b,
+                navLabelSci: '02 Enzyme Tunneling',
+                navLabelKids: '👻 02 Ghost Wall Shortcut',
+                tag: 'ALCOHOL DEHYDROGENASE // CATALYSIS',
+                kidsTag: '👻 QUANTUM GHOST TELEPORTATION',
+                scale: 'SCALE: 0.15 nm (1.5 Å)',
+                kidsScale: 'SIZE: 1 Proton (smaller than an atom!)',
+                title: 'Quantum Tunneling in Enzymes',
+                kidsTitle: 'The Ghost Wall Shortcut',
+                subtitle: 'Subatomic Proton & Hydride Wave Penetration Through Energy Barriers',
+                kidsSubtitle: 'How helper molecules make protons walk straight through solid energy mountains!',
+                description: `
+                    <p>Living cells rely on enzymes to accelerate biochemical reactions by factors of up to <strong class="text-white">10²⁰</strong>. Classical chemistry requires molecules to climb over a steep Activation Energy Barrier (ΔG‡).</p>
+                    <p>Because protons and electrons exhibit <strong class="text-amber-300">wave-particle duality</strong>, enzymes vibrate to squeeze donor and acceptor atoms within 1.5 Å—allowing the proton wave-packet to <strong class="text-amber-300">vanish on one side of the barrier and materialize on the other</strong> without climbing over it.</p>
+                `,
+                kidsDescription: `
+                    <p>Inside your body, tiny builder machines called <strong class="text-white">Enzymes</strong> have to move <strong class="text-amber-300">Protons</strong> from one pocket to another billions of times every second. But there is a giant <strong class="text-amber-300">Energy Wall</strong> blocking the way!</p>
+                    <p>Climbing over the wall takes way too long. Because a proton is super tiny, it acts like a fuzzy wave and uses <strong class="text-white">Quantum Tunneling</strong>—it walks <strong class="text-amber-300">straight through the solid wall like a ghost</strong> and pops out on the other side instantly!</p>
+                `,
+                kidsMission: 'Make the "Wall Thickness" slider super thick (100%)—see how almost no yellow ghost protons make it through to the right side? Now make the wall skinny (10%) and watch protons teleport through like magic!',
+                slider1Label: 'ACTIVATION BARRIER WIDTH (Δx)',
+                kidsSlider1Label: '🧱 ENERGY WALL THICKNESS',
+                slider1ValSuffix: ' Å',
+                slider1Default: 28,
+                slider1Hint: 'Narrowing the barrier width via enzyme thermal vibrations exponentially increases the quantum tunneling transmission probability T.',
+                kidsSlider1Hint: 'Protons can only ghost-tunnel through thin walls! When the enzyme squeezes the wall thin, protons zip right through.',
+                slider2Label: 'DONOR-ACCEPTOR VIBRATION',
+                kidsSlider2Label: '🤝 ENZYME SQUEEZE VIBRATION',
+                slider2Default: 80,
+                actionBtnText: 'TRIGGER PROTON TUNNELING EVENT',
+                kidsActionBtnText: '👻 TELEPORT PROTON THROUGH THE WALL!',
+                telemetryTime: 'Δt = 12 fs',
+                oscLabel: 'T ≈ exp(-2∫κ(x)dx)',
+                kidsOscLabel: '👻 GHOST TUNNELING WAVE METER',
+                oscFreq: 'K.I.E. = 7.4',
+                metric1Name: 'TUNNELING PROB.',
+                kidsMetric1Name: 'GHOST SUCCESS',
+                metric2Name: 'RATE SPEEDUP',
+                kidsMetric2Name: 'SPEED BOOST',
+                metric3Name: 'BARRIER FLUX',
+                kidsMetric3Name: 'WALL TELEPORTS',
+                activeStatusSci: '⚡ BARRIER TUNNELING EVENT DETECTED',
+                activeStatusKids: '👻 PROTON TELEPORTED THROUGH WALL!',
+                equation: 'T(E) = exp( -2Δx √(2m(V₀ - E)) / ℏ )',
+                kidsEquation: 'Skinny Wall + Fuzzy Proton Wave = Instant Ghost Shortcut!',
+                cameraPos: { x: 0, y: 7, z: 24 },
+                nodes: [
+                    {
+                        pos: [-7.5, 0.5, 0],
+                        title: 'Donor Pocket (NADH)',
+                        kidsTitle: '🟦 Starting Pocket (Launcher)',
+                        desc: 'Holds the proton/hydride wave-packet in a localized harmonic well before barrier transmission.',
+                        kidsDesc: 'The enzyme holds the proton here and jiggles it closer and closer to the orange wall.'
+                    },
+                    {
+                        pos: [0, 3.8, 0],
+                        title: 'Potential Energy Barrier (V₀)',
+                        kidsTitle: '🟧 The Giant Energy Wall',
+                        desc: 'Classically insurmountable energy wall. The decaying evanescent quantum wave penetrates straight through.',
+                        kidsDesc: 'A normal baseball would bounce off this wall, and climbing over is too hard—so the proton tunnels straight through the middle!'
+                    },
+                    {
+                        pos: [7.5, 0.5, 0],
+                        title: 'Acceptor Substrate',
+                        kidsTitle: '🟩 Finish Line Pocket (Catcher)',
+                        desc: 'Captures the tunneled proton wave-packet, completing the enzymatic reaction millions of times faster.',
+                        kidsDesc: 'Pop! The proton appears here on the other side of the wall without ever climbing over the top!'
+                    }
+                ]
+            },
+            {
+                id: 2,
+                accent: '#818cf8',
+                accentHex: 0x818cf8,
+                navLabelSci: '03 Avian Compass',
+                navLabelKids: '🐦 03 Bird Quantum Compass',
+                tag: 'ERITHACUS RUBECULA // CRYPTOCHROME-4',
+                kidsTag: '🐦 ROBIN SUPER-VISION COMPASS',
+                scale: 'SCALE: 1.8 nm',
+                kidsScale: 'SIZE: Inside a Bird’s Eye!',
+                title: 'Avian Quantum Magnetoreception',
+                kidsTitle: "The Robin's Secret Quantum Compass",
+                subtitle: 'Entangled Radical Pair Spin Dynamics in Bird Navigation',
+                kidsSubtitle: 'How baby birds see Earth’s invisible magnetic map using twin dancing electrons!',
+                description: `
+                    <p>Migratory songbirds like the European Robin navigate thousands of miles by literally <strong class="text-white">seeing Earth's faint 50-microtesla magnetic field</strong>—a field 100 times weaker than a refrigerator magnet.</p>
+                    <p>Blue light striking <strong class="text-indigo-300">Cryptochrome-4</strong> proteins in the bird's retina creates a spatially separated pair of <strong class="text-indigo-300">quantum-entangled electrons</strong>. Their coherent Singlet-Triplet spin interconversion is tilted by Earth's geomagnetic inclination, projecting a visual quantum compass onto the bird's vision.</p>
+                `,
+                kidsDescription: `
+                    <p>How does a tiny European Robin fly thousands of miles to Africa without a GPS map? It has a <strong class="text-indigo-300">Quantum Compass inside its eyes</strong> (<strong class="text-white">Magnetoreception</strong>)!</p>
+                    <p>When blue sky light hits a special eye protein called <strong class="text-indigo-300">Cryptochrome-4</strong>, it creates <strong class="text-amber-300">two Entangled Twin Electrons</strong>. Even though they are separated, their quantum <strong class="text-white">Spins</strong> dance together (<strong class="text-indigo-300">Singlet-Triplet dance</strong>). Earth's invisible magnetic field tilts their dance, painting a bright glowing compass ring right over what the bird sees!</p>
+                `,
+                kidsMission: 'Turn the "Tilt Earth’s Magnetic Field" slider from 0° to 90°. Watch the purple magnetic ring tilt and see how the Blue and Pink twin arrows change their dance from opposite (Singlet) to matching (Triplet)!',
+                slider1Label: 'GEOMAGNETIC INCLINATION (θ)',
+                kidsSlider1Label: '🧭 TILT EARTH’S MAGNETIC FIELD',
+                slider1ValSuffix: '°',
+                slider1Default: 45,
+                slider1Hint: 'Rotate the external geomagnetic field vector relative to the cryptochrome protein axis to shift the Singlet/Triplet quantum spin ratio.',
+                kidsSlider1Hint: 'As the bird turns its head, Earth’s magnetic field tilts the twin electrons’ spin dance, telling the bird which way is North or South!',
+                slider2Label: 'HYPERFINE SPIN COUPLING',
+                kidsSlider2Label: '💃 TWIN ELECTRON DANCE SPEED',
+                slider2Default: 65,
+                actionBtnText: 'EXCITE CRYPTOCHROME RADICAL PAIR',
+                kidsActionBtnText: '🐦 FLASH BLUE LIGHT INTO ROBIN’S EYE!',
+                telemetryTime: 'τ_spin = 10 μs',
+                oscLabel: '⟨P_Singlet(t)⟩ SPIN BEAT',
+                kidsOscLabel: '💃 TWIN SPIN DANCE RHYTHM',
+                oscFreq: '1.4 MHz',
+                metric1Name: 'SINGLET YIELD Φ_S',
+                kidsMetric1Name: 'COMPASS BRIGHTNESS',
+                metric2Name: 'ENTANGLEMENT',
+                kidsMetric2Name: 'TWIN LINK',
+                metric3Name: 'RADICAL YIELD',
+                kidsMetric3Name: 'COMPASS LOCK',
+                activeStatusSci: '⚡ RADICAL PAIR SPIN COHERENCE LOCKED',
+                activeStatusKids: '🐦 TWIN ELECTRONS DANCING IN SYNC!',
+                equation: 'Ĥ_spin = γB₀·(Ŝ₁ + Ŝ₂) + ∑ A_ik Î_ik·Ŝ_k',
+                kidsEquation: 'Blue Light + Twin Electron Spins = Eye Magnetic Map!',
+                cameraPos: { x: 0, y: 6, z: 24 },
+                nodes: [
+                    {
+                        pos: [-4.5, 0, 0],
+                        title: 'FAD•⁻ Radical (Electron A)',
+                        kidsTitle: '🔵 Twin Electron A (FAD Home)',
+                        desc: 'Flavin Adenine Dinucleotide cofactor that accepts an electron upon blue-light photoexcitation.',
+                        kidsDesc: 'Spinning like a tiny planet inside its cage (Bloch Sphere), this electron stays magically linked to its twin on the right!'
+                    },
+                    {
+                        pos: [4.5, 0, 0],
+                        title: 'TrpH•⁺ Radical (Electron B)',
+                        kidsTitle: '🔴 Twin Electron B (Tryptophan)',
+                        desc: 'Tryptophan triad residue holding the partner entangled electron 1.8 nm away.',
+                        kidsDesc: 'The partner twin electron! It feels even the tiniest pull from Earth’s magnetic field and changes the pair’s dance.'
+                    },
+                    {
+                        pos: [0, 5.2, 0],
+                        title: 'Singlet ⇄ Triplet Entanglement Bridge',
+                        kidsTitle: '✨ Spooky Twin Connection (Singlet-Triplet)',
+                        desc: 'Non-local quantum spin correlation that oscillates between antiparallel (Singlet) and parallel (Triplet) states.',
+                        kidsDesc: 'Einstein called this "spooky action at a distance"! The twins switch between pointing opposite ways (Singlet) and the same way (Triplet).'
+                    }
+                ]
+            }
+        ];
+
+        // Comprehensive Quantum Biology Glossary (20 Essential Terms with Dual Definitions)
+        const GLOSSARY_TERMS = [
+            {
+                term: 'Chromophore',
+                category: 'photosynthesis',
+                chapter: 0,
+                pronunciation: 'KROH-muh-for',
+                sciDef: 'A light-absorbing molecular group within a pigment or protein whose delocalized pi-electron system captures photons of specific wavelengths, initiating electronic excitation.',
+                kidDef: 'A tiny "light-catcher" molecule that gives plants and flowers their color! It acts like a solar panel that catches sunbeams.'
+            },
+            {
+                term: 'Bacteriochlorophyll',
+                category: 'photosynthesis',
+                chapter: 0,
+                pronunciation: 'bak-TEER-ee-oh-KLOR-uh-fil',
+                sciDef: 'A photosynthetic porphyrin pigment containing a central Magnesium (Mg²⁺) atom found in phototrophic bacteria (like Green Sulfur Bacteria), capable of absorbing near-infrared photons (~800 nm).',
+                kidDef: 'The special green-purple solar pigment inside ancient bacteria! Seven of them team up like stepping-stones to pass sunlight energy along.'
+            },
+            {
+                term: 'Exciton (and "Edition")',
+                category: 'photosynthesis',
+                chapter: 0,
+                pronunciation: 'EK-si-ton',
+                sciDef: 'Exciton: A bound quantum quasiparticle consisting of an excited electron and an electrostatic "hole" that transports energy without net charge migration. (Note: Often auto-corrected as "Edition"—in our lab, "Edition" also refers to switching between the Scientist Edition and Kids Explorer Edition!)',
+                kidDef: 'Exciton: A glowing ball of pure sunlight energy that hops and surfs across plant molecules to charge the cell’s battery! (And if you searched "Edition", that means version—like our Kids Explorer Edition vs. Scientist Edition!)'
+            },
+            {
+                term: 'Quantum Tunneling',
+                category: 'tunneling',
+                chapter: 1,
+                pronunciation: 'KWON-tum TUN-el-ing',
+                sciDef: 'A quantum mechanical phenomenon where a subatomic wavefunction (such as a proton, hydride, or electron) penetrates through a potential energy barrier higher than the particle’s kinetic energy.',
+                kidDef: 'The Ghost Wall Shortcut! Because protons and electrons act like fuzzy waves instead of hard pebbles, they can disappear on one side of a solid energy wall and pop out on the other side without climbing over!'
+            },
+            {
+                term: 'Quantum Telemetry',
+                category: 'fundamentals',
+                chapter: null,
+                pronunciation: 'KWON-tum tuh-LEM-uh-tree',
+                sciDef: 'Real-time measurement and visualization of subatomic state observables—such as probability density |Ψ(x,t)|², coherence decay times (femtoseconds), and spin oscillation frequencies—displayed on our right-hand HUD oscilloscope.',
+                kidDef: 'Our live "Quantum Dashboard" on the right side of the screen! It’s like a speedometer and heart-rate monitor that lets us watch invisible quantum waves wiggle in real time.'
+            },
+            {
+                term: 'Magnetoreception',
+                category: 'compass',
+                chapter: 2,
+                pronunciation: 'mag-NEE-toh-ri-SEP-shun',
+                sciDef: 'The biological sensory ability of organisms (including migratory songbirds, sea turtles, and insects) to detect the polarity, intensity, and inclination of Earth’s geomagnetic field for navigation.',
+                kidDef: 'A sixth sense that lets animals like robins, sea turtles, and butterflies feel or literally SEE Earth’s invisible magnetic field like a built-in compass!'
+            },
+            {
+                term: 'Cryptochrome-4 (Cry4)',
+                category: 'compass',
+                chapter: 2,
+                pronunciation: 'KRIP-toh-krohm for',
+                sciDef: 'A blue-light-sensitive flavoprotein located in the double-cone photoreceptor cells of migratory birds’ retinas that forms magnetically sensitive radical pairs for quantum compass navigation.',
+                kidDef: 'A special crystal-like protein inside a bird’s eyeball! When blue sky light hits Cryptochrome-4, it wakes up twin dancing electrons that sense which way is North.'
+            },
+            {
+                term: 'Chirality (Handedness)',
+                category: 'fundamentals',
+                chapter: 0,
+                pronunciation: 'ky-RAL-ih-tee',
+                sciDef: 'A geometric property of molecules (like DNA helices, amino acids, and proteins) that cannot be superimposed on their mirror image. In quantum biology, chiral molecules filter electron spins via the Chiral-Induced Spin Selectivity (CISS) effect.',
+                kidDef: 'Molecular "Left-or-Right Handedness"! Hold up your left and right hands—they are mirror images, but you can’t fit a left hand into a right-handed glove. Spiraling biological molecules twist like spiral staircases that help guide quantum spins!'
+            },
+            {
+                term: 'Quantum Spin',
+                category: 'compass',
+                chapter: 2,
+                pronunciation: 'KWON-tum SPIN',
+                sciDef: 'An intrinsic form of quantized angular momentum carried by elementary particles (S = ½ for electrons and protons), generating a tiny magnetic dipole moment that precesses in external magnetic fields.',
+                kidDef: 'Every electron acts like it is spinning like a tiny magnetic top! It can point "Spin-Up" or "Spin-Down" (or both at once!), turning each electron into a microscopic compass needle.'
+            },
+            {
+                term: 'Singlet-Triplet States',
+                category: 'compass',
+                chapter: 2,
+                pronunciation: 'SING-lit TRIP-lit',
+                sciDef: 'Two quantum spin configurations of an entangled two-electron radical pair: in the Singlet state (S=0), spins are antiparallel (↑↓); in the Triplet state (S=1), spins are parallel (↑↑). Weak magnetic fields drive coherent Singlet-Triplet interconversion.',
+                kidDef: 'The Twin Electron Dance! In "Singlet" mode, the two twin electrons point in opposite directions (one up, one down). In "Triplet" mode, they point the same way. Earth’s magnetic field makes them switch back and forth!'
+            },
+            {
+                term: 'Superposition & Coherence',
+                category: 'photosynthesis',
+                chapter: 0,
+                pronunciation: 'soo-per-puh-ZISH-un',
+                sciDef: 'The ability of a quantum system to exist in a linear combination of multiple eigenstates simultaneously (Superposition) while maintaining fixed phase relationships between those states (Coherence).',
+                kidDef: 'Being in multiple places at the exact same time! Like a ripple on a pond spreading down every hallway of a maze at once before choosing the best door.'
+            },
+            {
+                term: 'FMO Complex',
+                category: 'photosynthesis',
+                chapter: 0,
+                pronunciation: 'F-M-O KOM-pleks',
+                sciDef: 'The Fenna-Matthews-Olson complex: a trimeric water-soluble pigment-protein complex in green sulfur bacteria that acts as a quantum wire, funneling excitons from chlorosomes to the reaction center.',
+                kidDef: 'A microscopic 3-part protein cage found in green bacteria that holds 7 chlorophyll islands—the first living structure where scientists proved quantum wave surfing happens!'
+            },
+            {
+                term: 'Activation Energy Barrier',
+                category: 'tunneling',
+                chapter: 1,
+                pronunciation: 'ak-tih-VAY-shun BAR-ee-er',
+                sciDef: 'The minimum potential energy threshold (ΔG‡ or V₀) that reacting chemical species must overcome or tunnel through to transform reactants into products.',
+                kidDef: 'A steep energy mountain (the glowing orange wall in Chapter 2) standing between the starting ingredients and the finished biochemical recipe.'
+            },
+            {
+                term: 'De Broglie Wavelength',
+                category: 'tunneling',
+                chapter: 1,
+                pronunciation: 'duh BROY WAYV-length',
+                sciDef: 'The wavelength (λ = h / p) associated with a massive particle, expressing wave-particle duality. Because protons and electrons have tiny mass, their de Broglie wavelength is wide enough to overlap across enzymatic barriers.',
+                kidDef: 'The rule that EVERY particle in the universe is also a wave! Big things like soccer balls have waves too tiny to notice, but light particles like protons are super fuzzy waves.'
+            },
+            {
+                term: 'Radical Pair Mechanism',
+                category: 'compass',
+                chapter: 2,
+                pronunciation: 'RAD-ih-kul PAIR',
+                sciDef: 'A quantum chemical mechanism in which two transient molecules, each possessing an unpaired outer-shell electron, are created simultaneously in an entangled spin state whose chemical fate depends on weak magnetic fields.',
+                kidDef: 'When light zaps a protein and creates two partner molecules, each holding one twin electron. How those twins dance decides what chemical signal gets sent to the bird’s brain!'
+            },
+            {
+                term: 'Quantum Entanglement',
+                category: 'compass',
+                chapter: 2,
+                pronunciation: 'en-TANG-gul-ment',
+                sciDef: 'A non-local quantum correlation between two or more particles such that the quantum state of each particle cannot be described independently of the state of the other, even when separated in space.',
+                kidDef: 'An invisible magic friendship link between two particles! When you flip or nudge one twin electron, its partner twin instantly dances in response.'
+            },
+            {
+                term: 'FAD & Tryptophan (TrpH)',
+                category: 'compass',
+                chapter: 2,
+                pronunciation: 'F-A-D & TRIP-toh-fan',
+                sciDef: 'Flavin Adenine Dinucleotide (FAD) is the light-absorbing cofactor in Cryptochrome-4; Tryptophan (TrpH) forms a chain of four amino acids that donates an electron to FAD, creating the [FAD•⁻ ... TrpH•⁺] radical pair.',
+                kidDef: 'The two molecular "houses" inside the bird’s eye protein where Twin Electron A (FAD, blue) and Twin Electron B (Tryptophan, pink) live!'
+            },
+            {
+                term: 'Bloch Sphere',
+                category: 'compass',
+                chapter: 2,
+                pronunciation: 'BLOK SFEER',
+                sciDef: 'A 3D geometric representation of the pure state space of a two-level quantum mechanical system (qubit or spin-½ particle), where the North and South poles represent |↑⟩ and |↓⟩ eigenstates.',
+                kidDef: 'The glowing wireframe globes around the twin electrons in Chapter 3! They help us picture which direction the quantum spin arrow is pointing and tilting.'
+            },
+            {
+                term: 'Decoherence & Thermal Noise',
+                category: 'fundamentals',
+                chapter: 0,
+                pronunciation: 'dee-koh-HEER-ens',
+                sciDef: 'The loss of quantum phase coherence caused by random thermal collisions with surrounding water molecules and protein vibrations, collapsing a quantum superposition into classical statistical mixtures.',
+                kidDef: 'When warm, jiggly water molecules bump into a delicate quantum wave and pop it like a soap bubble! Living cells evolved clever protein shields to protect their quantum waves from noise.'
+            },
+            {
+                term: 'Kinetic Isotope Effect (K.I.E.)',
+                category: 'tunneling',
+                chapter: 1,
+                pronunciation: 'ki-NET-ik EYE-suh-tohp',
+                sciDef: 'The dramatic slowdown in enzymatic reaction rate when normal Hydrogen (¹H, 1 proton) is replaced with heavier Deuterium (²H, 1 proton + 1 neutron), proving experimentally that quantum tunneling is occurring.',
+                kidDef: 'How scientists proved enzymes use ghost tunneling! When they swapped normal protons for "chubby" heavy protons (Deuterium), the heavy ones couldn’t ghost through the wall nearly as fast!'
+            }
+        ];
+
+        /***********************************************************************
+         * 2. PROCEDURAL WEB AUDIO SYNTHESIZER (AMBIENT + REACTIVE SFX)
+         ***********************************************************************/
+        class QuantumAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.isPlaying = false;
+                this.masterGain = null;
+                this.oscillators = [];
+                this.filter = null;
+                this.lfo = null;
+                this.currentScene = 0;
+            }
+
+            init() {
+                if (this.ctx) return;
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+                this.masterGain.connect(this.ctx.destination);
+
+                // Warm low-pass filter for cinematic pad
+                this.filter = this.ctx.createBiquadFilter();
+                this.filter.type = 'lowpass';
+                this.filter.frequency.setValueAtTime(600, this.ctx.currentTime);
+                this.filter.Q.setValueAtTime(3.5, this.ctx.currentTime);
+                this.filter.connect(this.masterGain);
+
+                // Base frequencies for each scene chord
+                this.sceneChords = [
+                    [110, 164.81, 220, 277.18, 329.63], // Scene 0: A Major9 lush photosynthetic chord
+                    [98, 146.83, 196, 261.63, 293.66],  // Scene 1: G suspended mysterious tunneling chord
+                    [130.81, 196, 246.94, 329.63, 392]  // Scene 2: C Maj7 celestial magnetic chord
+                ];
+
+                const freqs = this.sceneChords[0];
+                freqs.forEach((f, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+                    osc.frequency.setValueAtTime(f, this.ctx.currentTime);
+                    // Slight detune for spatial chorus
+                    osc.detune.setValueAtTime((idx - 2) * 6, this.ctx.currentTime);
+
+                    gain.gain.setValueAtTime(0.06 / (idx * 0.4 + 1), this.ctx.currentTime);
+                    osc.connect(gain);
+                    gain.connect(this.filter);
+                    osc.start();
+                    this.oscillators.push({ osc, gain });
+                });
+
+                // Slow LFO modulating filter cutoff
+                this.lfo = this.ctx.createOscillator();
+                const lfoGain = this.ctx.createGain();
+                this.lfo.frequency.setValueAtTime(0.18, this.ctx.currentTime);
+                lfoGain.gain.setValueAtTime(280, this.ctx.currentTime);
+                this.lfo.connect(lfoGain);
+                lfoGain.connect(this.filter.frequency);
+                this.lfo.start();
+            }
+
+            enable() {
+                if (!this.ctx) this.init();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                this.isPlaying = true;
+                this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+                this.masterGain.gain.linearRampToValueAtTime(0.45, this.ctx.currentTime + 1.2);
+                updateAudioUI(true);
+            }
+
+            disable() {
+                if (!this.ctx) return;
+                this.isPlaying = false;
+                this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+                this.masterGain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);
+                updateAudioUI(false);
+            }
+
+            toggle() {
+                if (this.isPlaying) this.disable();
+                else this.enable();
+            }
+
+            morphToScene(sceneIdx) {
+                this.currentScene = sceneIdx;
+                if (!this.ctx || !this.isPlaying) return;
+                const now = this.ctx.currentTime;
+                const targetFreqs = this.sceneChords[sceneIdx];
+
+                this.oscillators.forEach((item, i) => {
+                    if (targetFreqs[i]) {
+                        item.osc.frequency.exponentialRampToValueAtTime(targetFreqs[i], now + 1.5);
+                    }
+                });
+
+                // Subtle shimmer ping on transition
+                this.playHarmonicPing(targetFreqs[4] * 2, 0.8, 'sine');
+            }
+
+            modulateFilter(normalizedVal) {
+                if (!this.ctx || !this.isPlaying) return;
+                const cutoff = 300 + normalizedVal * 1200;
+                this.filter.frequency.setTargetAtTime(cutoff, this.ctx.currentTime, 0.2);
+            }
+
+            playHarmonicPing(freq = 880, duration = 0.6, type = 'sine') {
+                if (!this.ctx || !this.isPlaying) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const pingGain = this.ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.498, now + duration);
+
+                pingGain.gain.setValueAtTime(0.12, now);
+                pingGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+                osc.connect(pingGain);
+                pingGain.connect(this.masterGain);
+
+                osc.start(now);
+                osc.stop(now + duration);
+            }
+
+            playQuantumPulseEffect(sceneIdx) {
+                if (!this.ctx || !this.isPlaying) return;
+                const now = this.ctx.currentTime;
+
+                if (sceneIdx === 0) {
+                    // Ascending pentatonic arpeggio for exciton coherence
+                    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, idx) => {
+                        setTimeout(() => this.playHarmonicPing(f, 0.55, 'sine'), idx * 70);
+                    });
+                } else if (sceneIdx === 1) {
+                    // Sub-bass warp + high crystalline chime for proton tunneling
+                    const osc = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.exponentialRampToValueAtTime(960, now + 0.45);
+                    g.gain.setValueAtTime(0.22, now);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                    osc.connect(g);
+                    g.connect(this.masterGain);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else {
+                    // Dual binaural spin-flip chord for radical pair
+                    this.playHarmonicPing(440, 0.9, 'sine');
+                    this.playHarmonicPing(446, 0.9, 'triangle');
+                    setTimeout(() => this.playHarmonicPing(880, 0.7, 'sine'), 140);
+                }
+            }
+        }
+
+        const audioEngine = new QuantumAudioEngine();
+
+        function updateAudioUI(playing) {
+            const indicator = document.getElementById('sound-wave-indicator');
+            const text = document.getElementById('audio-status-text');
+            if (playing) {
+                indicator.classList.add('playing');
+                text.textContent = 'SYNTH ON';
+                text.classList.add('text-teal-300');
+            } else {
+                indicator.classList.remove('playing');
+                text.textContent = 'MUTED';
+                text.classList.remove('text-teal-300');
+            }
+        }
+
+        function toggleAudio() {
+            audioEngine.toggle();
+        }
+
+        /***********************************************************************
+         * 3. THREE.JS 3D SCENE ARCHITECTURE & PROCEDURAL GLOW SPRITES
+         ***********************************************************************/
+        let scene, camera, renderer, raycaster, mouse;
+        let currentSceneIdx = 0;
+        let autoOrbit = true;
+        let clock = new THREE.Clock();
+
+        // Camera spherical coordinates for smooth damping & user orbit
+        let camSpherical = { radius: 23, theta: 0.2, phi: 1.32 };
+        let targetSpherical = { radius: 23, theta: 0.2, phi: 1.32 };
+        let isDragging = false;
+        let prevMouse = { x: 0, y: 0 };
+
+        // Scene-specific groups
+        const sceneGroups = [];
+        let interactableMeshes = [];
+        let activeLabelElements = [];
+
+        // Simulation state variables controlled by UI sliders
+        let simParams = {
+            param1: 15, // Noise / Barrier Width / Magnetic Angle
+            param2: 75, // Flux / Vibration / Coupling
+            pulseBoost: 0,
+            telemetryExcitation: 0, // Spikes to 1.0 on click, decays over ~3.5 seconds
+            pulseCount: 0,
+            pulseTimestamp: 0
+        };
+
+        // Objects references for animations
+        let fmoData = { chromophores: [], wavePackets: [], proteinRibbons: [], auraSprites: [] };
+        let tunnelData = { surfaceGeo: null, barrierMesh: null, packets: [], donorNode: null, acceptorNode: null };
+        let avianData = { spinGroup1: null, spinGroup2: null, arrow1: null, arrow2: null, fieldLines: [], bridgeParticles: null, compassRing: null };
+
+        // Generate procedural radial glow texture so we need zero external image assets
+        function createGlowTexture(colorHex = '#00f5d4') {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(0.22, colorHex);
+            gradient.addColorStop(0.55, colorHex + '44');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 128, 128);
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+        const glowTextureTeal = createGlowTexture('#00f5d4');
+        const glowTextureAmber = createGlowTexture('#f59e0b');
+        const glowTextureIndigo = createGlowTexture('#818cf8');
+        const glowTextureRose = createGlowTexture('#f43f5e');
+
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x030712, 0.018);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.25;
+            container.appendChild(renderer.domElement);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Ambient & Cinematic Lights
+            const ambientLight = new THREE.AmbientLight(0x1e293b, 1.5);
+            scene.add(ambientLight);
+
+            const mainLight = new THREE.PointLight(0x00f5d4, 3, 60);
+            mainLight.position.set(12, 15, 12);
+            scene.add(mainLight);
+
+            const rimLight = new THREE.PointLight(0x818cf8, 2.5, 60);
+            rimLight.position.set(-14, -10, -10);
+            scene.add(rimLight);
+
+            // Ambient Subatomic Background Dust Field
+            createSubatomicBackground();
+
+            // Build the 3 Quantum Biology Scenes
+            buildScene0Photosynthesis();
+            buildScene1EnzymeTunneling();
+            buildScene2AvianCompass();
+
+            // Activate Initial Scene
+            setActiveSceneGroup(0);
+            createFloatingLabels(0);
+
+            // Event Listeners for Orbit, Zoom, and Node Clicking
+            setupInteractionListeners(renderer.domElement);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createSubatomicBackground() {
+            const count = 900;
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            for (let i = 0; i < count * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 90;
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({
+                size: 0.45,
+                map: glowTextureTeal,
+                transparent: true,
+                opacity: 0.35,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const dust = new THREE.Points(geo, mat);
+            dust.name = 'backgroundDust';
+            scene.add(dust);
+        }
+
+        /***********************************************************************
+         * SCENE 0: QUANTUM COHERENCE IN PHOTOSYNTHESIS (FMO COMPLEX)
+         ***********************************************************************/
+        function buildScene0Photosynthesis() {
+            const group = new THREE.Group();
+            sceneGroups[0] = group;
+            scene.add(group);
+
+            // 7 Bacteriochlorophyll-a chromophore coordinates in the FMO monomer
+            const coords = [
+                new THREE.Vector3(-6.5, 4.2, 1.5),  // BChl 1 (Top Left Antenna Entry)
+                new THREE.Vector3(-2.5, 3.6, -1.8), // BChl 2
+                new THREE.Vector3(0.0, -5.5, 0.0),  // BChl 3 (Bottom Reaction Center Sink)
+                new THREE.Vector3(0.5, 0.8, 2.2),   // BChl 4 (Central Coherent Hub)
+                new THREE.Vector3(4.5, 1.8, -1.2),  // BChl 5
+                new THREE.Vector3(5.8, 4.4, 1.4),   // BChl 6 (Top Right Antenna Entry)
+                new THREE.Vector3(-3.2, -1.8, -1.5) // BChl 7
+            ];
+
+            // Pathways connecting chromophores
+            const pathways = [
+                [0, 1], [1, 3], [3, 2], [0, 6], [6, 2],
+                [5, 4], [4, 3], [5, 1], [4, 2], [6, 3]
+            ];
+
+            // Create Porphyrin-like Chromophore Nodes & Quantum Delocalization Clouds
+            coords.forEach((pos, idx) => {
+                const isSink = idx === 2;
+                const isEntry = idx === 0 || idx === 5;
+                const nodeColor = isSink ? 0x10b981 : (isEntry ? 0x38bdf8 : 0x00f5d4);
+
+                const chromoGroup = new THREE.Group();
+                chromoGroup.position.copy(pos);
+
+                // Central Magnesium Ion Core
+                const coreGeo = new THREE.OctahedronGeometry(isSink ? 0.85 : 0.65, 2);
+                const coreMat = new THREE.MeshStandardMaterial({
+                    color: nodeColor,
+                    emissive: nodeColor,
+                    emissiveIntensity: 0.85,
+                    roughness: 0.2,
+                    metalness: 0.8
+                });
+                const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+                coreMesh.userData = {
+                    title: `Bacteriochlorophyll-a #${idx + 1}`,
+                    desc: isSink
+                        ? 'Reaction Center trap (lowest exciton energy state). Captures coherent wave-packet at 98%+ quantum efficiency.'
+                        : 'Porphyrin ring chromophore participating in delocalized quantum beat oscillations.'
+                };
+                interactableMeshes.push(coreMesh);
+                chromoGroup.add(coreMesh);
+
+                // Porphyrin Molecular Ring Frame
+                const ringGeo = new THREE.TorusGeometry(1.15, 0.06, 12, 32);
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: nodeColor,
+                    transparent: true,
+                    opacity: 0.6,
+                    blending: THREE.AdditiveBlending
+                });
+                const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+                ringMesh.rotation.set(Math.random() * 2, Math.random() * 2, 0);
+                chromoGroup.add(ringMesh);
+
+                // Outer Quantum Superposition Wave Halo (Scales with coherence)
+                const spriteMat = new THREE.SpriteMaterial({
+                    map: glowTextureTeal,
+                    color: nodeColor,
+                    transparent: true,
+                    opacity: 0.55,
+                    blending: THREE.AdditiveBlending
+                });
+                const sprite = new THREE.Sprite(spriteMat);
+                sprite.scale.set(4.5, 4.5, 1);
+                chromoGroup.add(sprite);
+                fmoData.auraSprites.push(sprite);
+
+                group.add(chromoGroup);
+                fmoData.chromophores.push({ group: chromoGroup, pos, ringMesh, coreMesh, baseScale: isSink ? 1.25 : 1 });
+            });
+
+            // Create Coherent Energy Bridges & Wave-Packets along all pathways
+            pathways.forEach(([startIdx, endIdx]) => {
+                const p1 = coords[startIdx];
+                const p2 = coords[endIdx];
+                const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+                mid.x += (Math.random() - 0.5) * 1.5;
+                mid.z += (Math.random() - 0.5) * 1.5;
+
+                const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+                const points = curve.getPoints(40);
+                const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                const lineMat = new THREE.LineBasicMaterial({
+                    color: 0x00f5d4,
+                    transparent: true,
+                    opacity: 0.35,
+                    blending: THREE.AdditiveBlending
+                });
+                const line = new THREE.Line(lineGeo, lineMat);
+                group.add(line);
+
+                // Travelling Exciton Wave-Packet Sphere + Glow Sprite
+                for (let k = 0; k < 2; k++) {
+                    const packetSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                        map: glowTextureTeal,
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.9,
+                        blending: THREE.AdditiveBlending
+                    }));
+                    packetSprite.scale.set(1.8, 1.8, 1);
+                    group.add(packetSprite);
+
+                    fmoData.wavePackets.push({
+                        sprite: packetSprite,
+                        curve: curve,
+                        t: (k * 0.5 + Math.random() * 0.3) % 1,
+                        speed: 0.28 + Math.random() * 0.15,
+                        lineMat: lineMat
+                    });
+                }
+            });
+
+            // Alpha-Helix Protein Scaffold Enclosing the FMO Complex
+            for (let h = 0; h < 3; h++) {
+                const helixPts = [];
+                const angleOffset = (h * Math.PI * 2) / 3;
+                for (let i = 0; i <= 80; i++) {
+                    const t = i / 80;
+                    const angle = t * Math.PI * 4 + angleOffset;
+                    const r = 8.5 + Math.sin(t * Math.PI) * 1.5;
+                    const x = Math.cos(angle) * r;
+                    const z = Math.sin(angle) * r;
+                    const y = (t - 0.5) * 14;
+                    helixPts.push(new THREE.Vector3(x, y, z));
+                }
+                const helixCurve = new THREE.CatmullRomCurve3(helixPts);
+                const tubeGeo = new THREE.TubeGeometry(helixCurve, 64, 0.12, 8, false);
+                const tubeMat = new THREE.MeshStandardMaterial({
+                    color: 0x0f766e,
+                    transparent: true,
+                    opacity: 0.28,
+                    roughness: 0.4
+                });
+                const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+                group.add(tubeMesh);
+                fmoData.proteinRibbons.push(tubeMesh);
+            }
+        }
+
+        /***********************************************************************
+         * SCENE 1: QUANTUM TUNNELING IN ENZYMES (PROTON WAVE PENETRATION)
+         ***********************************************************************/
+        function buildScene1EnzymeTunneling() {
+            const group = new THREE.Group();
+            sceneGroups[1] = group;
+            scene.add(group);
+
+            // 3D Potential Energy Surface Grid (Double-Well with Central Activation Barrier)
+            const planeGeo = new THREE.PlaneGeometry(22, 12, 80, 40);
+            planeGeo.rotateX(-Math.PI / 2);
+            const wireMat = new THREE.MeshBasicMaterial({
+                color: 0xf59e0b,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.32,
+                blending: THREE.AdditiveBlending
+            });
+            const surfaceMesh = new THREE.Mesh(planeGeo, wireMat);
+            surfaceMesh.position.y = -2.5;
+            group.add(surfaceMesh);
+            tunnelData.surfaceGeo = planeGeo;
+
+            // Translucent Classical Energy Barrier Wall
+            const barrierGeo = new THREE.BoxGeometry(1.8, 6.5, 11);
+            const barrierMat = new THREE.MeshPhysicalMaterial({
+                color: 0xf59e0b,
+                emissive: 0xb45309,
+                emissiveIntensity: 0.35,
+                transparent: true,
+                opacity: 0.25,
+                roughness: 0.1,
+                transmission: 0.6
+            });
+            const barrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
+            barrierMesh.position.set(0, 0.8, 0);
+            barrierMesh.userData = {
+                title: 'Activation Energy Barrier (ΔG‡)',
+                desc: 'Classically requires high thermal energy to surmount. Quantum mechanics permits evanescent wave transmission straight through.'
+            };
+            interactableMeshes.push(barrierMesh);
+            group.add(barrierMesh);
+            tunnelData.barrierMesh = barrierMesh;
+
+            // Donor Catalytic Residue (Left Well)
+            const donorGroup = new THREE.Group();
+            donorGroup.position.set(-7.5, 0.5, 0);
+            const donorSphere = new THREE.Mesh(
+                new THREE.IcosahedronGeometry(1.2, 2),
+                new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.7, wireframe: true })
+            );
+            donorSphere.userData = {
+                title: 'Enzyme Donor Site (C-H Bond)',
+                desc: 'Thermal promoting vibrations compress the donor-acceptor distance, triggering subatomic proton tunneling.'
+            };
+            interactableMeshes.push(donorSphere);
+            donorGroup.add(donorSphere);
+            group.add(donorGroup);
+            tunnelData.donorNode = donorGroup;
+
+            // Acceptor Catalytic Residue (Right Well)
+            const acceptorGroup = new THREE.Group();
+            acceptorGroup.position.set(7.5, 0.5, 0);
+            const acceptorSphere = new THREE.Mesh(
+                new THREE.IcosahedronGeometry(1.2, 2),
+                new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.7, wireframe: true })
+            );
+            acceptorSphere.userData = {
+                title: 'Enzyme Acceptor Pocket',
+                desc: 'Receives the tunneled proton wave-packet in less than 15 femtoseconds.'
+            };
+            interactableMeshes.push(acceptorSphere);
+            acceptorGroup.add(acceptorSphere);
+            group.add(acceptorGroup);
+            tunnelData.acceptorNode = acceptorGroup;
+
+            // Quantum Proton Wave-Packets (De Broglie Wave Clouds that tunnel through X = 0)
+            for (let i = 0; i < 18; i++) {
+                const pktSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: glowTextureAmber,
+                    color: 0xfef08a,
+                    transparent: true,
+                    opacity: 0.85,
+                    blending: THREE.AdditiveBlending
+                }));
+                pktSprite.scale.set(2.2, 2.2, 1);
+                group.add(pktSprite);
+
+                tunnelData.packets.push({
+                    sprite: pktSprite,
+                    phase: i / 18,
+                    zOffset: (Math.random() - 0.5) * 5.5,
+                    yPhase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        /***********************************************************************
+         * SCENE 2: AVIAN MAGNETORECEPTION (RADICAL PAIR SPIN ENTANGLEMENT)
+         ***********************************************************************/
+        function buildScene2AvianCompass() {
+            const group = new THREE.Group();
+            sceneGroups[2] = group;
+            scene.add(group);
+
+            // Helper to build a Bloch Sphere + Precessing Spin Vector Arrow
+            function createRadicalSpinNode(xPos, colorHex, glowMap, labelTitle) {
+                const nodeGroup = new THREE.Group();
+                nodeGroup.position.set(xPos, 0, 0);
+
+                // Outer Bloch Sphere Wireframe Cage
+                const cageGeo = new THREE.SphereGeometry(2.6, 24, 16);
+                const cageMat = new THREE.MeshBasicMaterial({
+                    color: colorHex,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.22,
+                    blending: THREE.AdditiveBlending
+                });
+                const cage = new THREE.Mesh(cageGeo, cageMat);
+                cage.userData = {
+                    title: labelTitle,
+                    desc: 'Quantum radical spin state precessing in Earth’s 50 μT geomagnetic field.'
+                };
+                interactableMeshes.push(cage);
+                nodeGroup.add(cage);
+
+                // Equatorial & Meridian Rings
+                const eqRing = new THREE.Mesh(
+                    new THREE.TorusGeometry(2.62, 0.05, 12, 64),
+                    new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.7 })
+                );
+                eqRing.rotation.x = Math.PI / 2;
+                nodeGroup.add(eqRing);
+
+                // Glowing Electron Core
+                const coreGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: glowMap,
+                    transparent: true,
+                    opacity: 0.85,
+                    blending: THREE.AdditiveBlending
+                }));
+                coreGlow.scale.set(3.8, 3.8, 1);
+                nodeGroup.add(coreGlow);
+
+                // Quantum Spin Vector Arrow (Shaft + Cone Tip)
+                const arrowGroup = new THREE.Group();
+                const shaft = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, 3.6, 12),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff })
+                );
+                shaft.position.y = 0.8;
+                const cone = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.35, 0.9, 16),
+                    new THREE.MeshBasicMaterial({ color: colorHex })
+                );
+                cone.position.y = 2.8;
+                arrowGroup.add(shaft, cone);
+                nodeGroup.add(arrowGroup);
+
+                group.add(nodeGroup);
+                return { nodeGroup, arrowGroup };
+            }
+
+            const spinA = createRadicalSpinNode(-4.8, 0x38bdf8, glowTextureTeal, 'FAD•⁻ Radical Electron Spin A');
+            const spinB = createRadicalSpinNode(4.8, 0xf43f5e, glowTextureRose, 'TrpH•⁺ Radical Electron Spin B');
+            avianData.spinGroup1 = spinA.nodeGroup;
+            avianData.spinGroup2 = spinB.nodeGroup;
+            avianData.arrow1 = spinA.arrowGroup;
+            avianData.arrow2 = spinB.arrowGroup;
+
+            // Non-Local Quantum Entanglement Bridge Between Radical Pair
+            const bridgeCount = 120;
+            const bridgeGeo = new THREE.BufferGeometry();
+            const bridgePositions = new Float32Array(bridgeCount * 3);
+            bridgeGeo.setAttribute('position', new THREE.BufferAttribute(bridgePositions, 3));
+            const bridgeMat = new THREE.PointsMaterial({
+                size: 0.65,
+                map: glowTextureIndigo,
+                transparent: true,
+                opacity: 0.85,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const bridgePoints = new THREE.Points(bridgeGeo, bridgeMat);
+            group.add(bridgePoints);
+            avianData.bridgeParticles = bridgePoints;
+
+            // External Geomagnetic Field Flux Arcs & Compass Rose Ring
+            const compassGroup = new THREE.Group();
+            const compassTorus = new THREE.Mesh(
+                new THREE.TorusGeometry(9.5, 0.06, 12, 90),
+                new THREE.MeshBasicMaterial({ color: 0x818cf8, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending })
+            );
+            compassTorus.rotation.x = Math.PI / 2;
+            compassGroup.add(compassTorus);
+
+            // Geomagnetic Flux Lines curving across the Radical Pair
+            for (let i = -3; i <= 3; i++) {
+                if (i === 0) continue;
+                const curve = new THREE.CatmullRomCurve3([
+                    new THREE.Vector3(-11, -5, i * 1.8),
+                    new THREE.Vector3(0, i * 1.4, i * 2.2),
+                    new THREE.Vector3(11, 5, i * 1.8)
+                ]);
+                const pts = curve.getPoints(50);
+                const lGeo = new THREE.BufferGeometry().setFromPoints(pts);
+                const lMat = new THREE.LineBasicMaterial({
+                    color: 0x6366f1,
+                    transparent: true,
+                    opacity: 0.28,
+                    blending: THREE.AdditiveBlending
+                });
+                compassGroup.add(new THREE.Line(lGeo, lMat));
+            }
+            group.add(compassGroup);
+            avianData.compassRing = compassGroup;
+        }
+
+        /***********************************************************************
+         * 4. SCENE SWITCHING, UI LABELS & PARAMETER BINDINGS
+         ***********************************************************************/
+        function setActiveSceneGroup(index) {
+            sceneGroups.forEach((grp, idx) => {
+                grp.visible = (idx === index);
+            });
+        }
+
+        function refreshSceneUI() {
+            const data = SCENES_DATA[currentSceneIdx];
+
+            // Update CSS Accent Variable
+            document.documentElement.style.setProperty('--accent', data.accent);
+
+            // Update Top Nav Pill States & Labels
+            for (let i = 0; i < 3; i++) {
+                const btn = document.getElementById(`nav-btn-${i}`);
+                const lbl = document.getElementById(`nav-label-${i}`);
+                if (lbl) {
+                    lbl.textContent = isKidsMode ? SCENES_DATA[i].navLabelKids : SCENES_DATA[i].navLabelSci;
+                }
+                if (i === currentSceneIdx) btn.classList.add('active');
+                else btn.classList.remove('active');
+            }
+
+            // Populate Left Science / Explorer Dossier Panel
+            document.getElementById('scene-tag').textContent = isKidsMode ? data.kidsTag : data.tag;
+            document.getElementById('scene-scale').innerHTML = `<i class="ph ph-ruler"></i> ${isKidsMode ? data.kidsScale : data.scale}`;
+            document.getElementById('scene-title').textContent = isKidsMode ? data.kidsTitle : data.title;
+            document.getElementById('scene-subtitle').textContent = isKidsMode ? data.kidsSubtitle : data.subtitle;
+            document.getElementById('scene-description').innerHTML = isKidsMode ? data.kidsDescription : data.description;
+
+            // Kids Mission Callout Box
+            const missionBox = document.getElementById('kids-mission-box');
+            if (isKidsMode) {
+                missionBox.classList.remove('hidden');
+                document.getElementById('kids-mission-text').textContent = data.kidsMission;
+            } else {
+                missionBox.classList.add('hidden');
+            }
+
+            document.getElementById('slider-1-label').textContent = isKidsMode ? data.kidsSlider1Label : data.slider1Label;
+            document.getElementById('slider-1-hint').textContent = isKidsMode ? data.kidsSlider1Hint : data.slider1Hint;
+            document.getElementById('slider-2-label').textContent = isKidsMode ? data.kidsSlider2Label : data.slider2Label;
+            document.getElementById('action-btn-text').textContent = isKidsMode ? data.kidsActionBtnText : data.actionBtnText;
+
+            // Populate Right Telemetry Panel
+            document.getElementById('telemetry-time').textContent = data.telemetryTime;
+            document.getElementById('osc-label').textContent = isKidsMode ? data.kidsOscLabel : data.oscLabel;
+            document.getElementById('osc-freq').textContent = data.oscFreq;
+            document.getElementById('metric-1-name').textContent = isKidsMode ? data.kidsMetric1Name : data.metric1Name;
+            document.getElementById('metric-2-name').textContent = isKidsMode ? data.kidsMetric2Name : data.metric2Name;
+            document.getElementById('metric-3-name').textContent = isKidsMode ? data.kidsMetric3Name : data.metric3Name;
+            document.getElementById('equation-prefix').textContent = isKidsMode ? 'SUPERPOWER RULE:' : 'EQUATION:';
+            document.getElementById('equation-readout').textContent = isKidsMode ? data.kidsEquation : data.equation;
+
+            // Refresh 3D Floating Node Labels & Default Inspector Text
+            createFloatingLabels(currentSceneIdx);
+            const firstNode = data.nodes[0];
+            inspectNode(
+                isKidsMode ? firstNode.kidsTitle : firstNode.title,
+                isKidsMode ? firstNode.kidsDesc : firstNode.desc
+            );
+            updateSimulationParams();
+            updateLiveTelemetryReadouts();
+        }
+
+        function switchScene(index) {
+            if (index === currentSceneIdx) return;
+            currentSceneIdx = index;
+            const data = SCENES_DATA[index];
+
+            const s1 = document.getElementById('param-slider-1');
+            const s2 = document.getElementById('param-slider-2');
+            s1.value = data.slider1Default;
+            s2.value = data.slider2Default;
+
+            setActiveSceneGroup(index);
+            refreshSceneUI();
+
+            // Smoothly glide camera to new angle
+            targetSpherical.radius = 23;
+            targetSpherical.phi = 1.28;
+            targetSpherical.theta += 0.8;
+
+            // Morph Procedural Ambient Synthesizer Chord
+            audioEngine.morphToScene(index);
+        }
+
+        function setAudienceMode(kids) {
+            isKidsMode = kids;
+            const body = document.body;
+            const badge = document.getElementById('edition-badge');
+            const modeIcon = document.getElementById('mode-icon');
+            const modeBtnLabel = document.getElementById('mode-btn-label');
+            const splashSci = document.getElementById('splash-mode-sci');
+            const splashKids = document.getElementById('splash-mode-kids');
+
+            if (isKidsMode) {
+                body.classList.add('kids-mode');
+                badge.textContent = 'KIDS EXPLORER (9+)';
+                badge.className = 'text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-300 border border-amber-400/40';
+                modeIcon.textContent = '🔬';
+                modeBtnLabel.textContent = 'Scientist Mode';
+                if (splashKids && splashSci) {
+                    splashKids.className = 'p-3.5 rounded-2xl border border-amber-400 bg-amber-500/20 text-left transition-all';
+                    splashSci.className = 'p-3.5 rounded-2xl border border-white/15 bg-white/5 text-left hover:border-teal-400/60 transition-all';
+                }
+            } else {
+                body.classList.remove('kids-mode');
+                badge.textContent = 'SCIENTIST ED.';
+                badge.className = 'text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30';
+                modeIcon.textContent = '🚀';
+                modeBtnLabel.textContent = 'Kids (9+) Mode';
+                if (splashKids && splashSci) {
+                    splashSci.className = 'p-3.5 rounded-2xl border border-teal-400 bg-teal-500/15 text-left transition-all';
+                    splashKids.className = 'p-3.5 rounded-2xl border border-white/15 bg-white/5 text-left hover:border-amber-400/60 transition-all';
+                }
+            }
+
+            refreshSceneUI();
+            renderGlossaryItems();
+            audioEngine.playHarmonicPing(isKidsMode ? 880 : 523.25, 0.4, 'sine');
+        }
+
+        function toggleAudienceMode() {
+            setAudienceMode(!isKidsMode);
+        }
+
+        /***********************************************************************
+         * GLOSSARY DRAWER / MODAL LOGIC
+         ***********************************************************************/
+        function toggleGlossary(show) {
+            const modal = document.getElementById('glossary-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                renderGlossaryItems();
+                audioEngine.playHarmonicPing(659.25, 0.35, 'sine');
+                setTimeout(() => {
+                    const searchInput = document.getElementById('glossary-search');
+                    if (searchInput) searchInput.focus();
+                }, 100);
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function setGlossaryFilter(cat) {
+            currentGlossaryFilter = cat;
+            ['all', 'photosynthesis', 'tunneling', 'compass', 'fundamentals'].forEach(c => {
+                const btn = document.getElementById(`g-filter-${c}`);
+                if (btn) {
+                    if (c === cat) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                }
+            });
+            renderGlossaryItems();
+            audioEngine.playHarmonicPing(740, 0.25, 'sine');
+        }
+
+        function jumpToSceneFromGlossary(sceneIdx) {
+            toggleGlossary(false);
+            if (sceneIdx !== null && sceneIdx !== undefined) {
+                switchScene(sceneIdx);
+            }
+        }
+
+        function renderGlossaryItems() {
+            const grid = document.getElementById('glossary-grid');
+            const searchEl = document.getElementById('glossary-search');
+            if (!grid) return;
+
+            const query = (searchEl ? searchEl.value : '').trim().toLowerCase();
+            const filtered = GLOSSARY_TERMS.filter(item => {
+                const matchesCat = currentGlossaryFilter === 'all' || item.category === currentGlossaryFilter;
+                const matchesQuery = !query ||
+                    item.term.toLowerCase().includes(query) ||
+                    item.sciDef.toLowerCase().includes(query) ||
+                    item.kidDef.toLowerCase().includes(query);
+                return matchesCat && matchesQuery;
+            });
+
+            const countBadge = document.getElementById('glossary-count-badge');
+            if (countBadge) countBadge.textContent = `${filtered.length} ${filtered.length === 1 ? 'Term' : 'Terms'}`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-slate-400">
+                        <i class="ph ph-magnifying-glass text-3xl mb-2 block opacity-50"></i>
+                        <div class="text-sm font-medium text-white">No matching quantum terms found</div>
+                        <div class="text-xs mt-1">Try searching "exciton", "edition", "chromophore", "tunneling", or "spin".</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const catBadges = {
+                photosynthesis: { label: '🌱 Ch.1 Photosynthesis', cls: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
+                tunneling: { label: '⚡ Ch.2 Enzyme Tunneling', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+                compass: { label: '🧭 Ch.3 Avian Compass', cls: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
+                fundamentals: { label: '⚛️ Quantum Core', cls: 'bg-pink-500/20 text-pink-300 border-pink-500/30' }
+            };
+
+            grid.innerHTML = filtered.map((item, idx) => {
+                const badge = catBadges[item.category] || catBadges.fundamentals;
+                const kidBoxHighlight = isKidsMode
+                    ? 'border-amber-400/50 bg-amber-500/15 ring-1 ring-amber-400/30'
+                    : 'border-amber-500/20 bg-amber-950/20';
+
+                return `
+                    <div onclick="audioEngine.playHarmonicPing(${520 + (idx % 6) * 65}, 0.3, 'sine')" class="glossary-card rounded-2xl p-4 flex flex-col justify-between gap-3 cursor-pointer">
+                        <div>
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <div>
+                                    <h3 class="font-display font-bold text-base text-white">${item.term}</h3>
+                                    <span class="text-[11px] font-mono-tech text-slate-400">/${item.pronunciation}/</span>
+                                </div>
+                                <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded-md border ${badge.cls} whitespace-nowrap">
+                                    ${badge.label}
+                                </span>
+                            </div>
+
+                            <!-- 9-Year-Old Explorer Definition -->
+                            <div class="p-3 rounded-xl border ${kidBoxHighlight} mb-2.5">
+                                <div class="text-[10px] font-mono-tech uppercase tracking-wider text-amber-300 font-bold mb-1 flex items-center gap-1">
+                                    <span>🚀</span>
+                                    <span>In Kid Explorer Words (Age 9+):</span>
+                                </div>
+                                <p class="text-xs text-slate-100 leading-relaxed">${item.kidDef}</p>
+                            </div>
+
+                            <!-- Biophysicist Definition -->
+                            <div class="p-3 rounded-xl bg-slate-900/70 border border-white/5">
+                                <div class="text-[10px] font-mono-tech uppercase tracking-wider text-teal-300 font-semibold mb-1 flex items-center gap-1">
+                                    <span>🔬</span>
+                                    <span>Biophysics Definition:</span>
+                                </div>
+                                <p class="text-xs text-slate-300 leading-relaxed">${item.sciDef}</p>
+                            </div>
+                        </div>
+
+                        ${item.chapter !== null ? `
+                            <div class="flex justify-end pt-1">
+                                <button onclick="event.stopPropagation(); jumpToSceneFromGlossary(${item.chapter})" class="text-[11px] font-mono-tech text-teal-300 hover:text-white flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/25 border border-teal-500/30 transition-colors">
+                                    <span>Inspect in 3D Chapter 0${item.chapter + 1}</span>
+                                    <i class="ph-bold ph-arrow-right"></i>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function createFloatingLabels(sceneIdx) {
+            const container = document.getElementById('labels-container');
+            container.innerHTML = '';
+            activeLabelElements = [];
+
+            const nodes = SCENES_DATA[sceneIdx].nodes;
+            nodes.forEach((node, idx) => {
+                const displayTitle = isKidsMode ? node.kidsTitle : node.title;
+                const displayDesc = isKidsMode ? node.kidsDesc : node.desc;
+                const el = document.createElement('div');
+                el.className = 'node-label flex items-center gap-2 group';
+                el.innerHTML = `
+                    <div class="node-dot w-3.5 h-3.5 rounded-full bg-white border-2 border-teal-400 shadow-[0_0_12px_var(--accent)] transition-transform"></div>
+                    <div class="px-2.5 py-1 rounded-lg bg-slate-950/85 border border-white/15 backdrop-blur-md text-[11px] font-mono-tech text-white whitespace-nowrap shadow-lg group-hover:border-teal-400/60 transition-colors">
+                        <span class="text-teal-300 mr-1">[0${idx + 1}]</span>${displayTitle}
+                    </div>
+                `;
+                el.onclick = () => {
+                    inspectNode(displayTitle, displayDesc);
+                    audioEngine.playHarmonicPing(660 + idx * 140, 0.5, 'sine');
+                };
+                container.appendChild(el);
+                activeLabelElements.push({
+                    element: el,
+                    worldPos: new THREE.Vector3(node.pos[0], node.pos[1], node.pos[2])
+                });
+            });
+        }
+
+        function inspectNode(title, desc) {
+            const titleEl = document.getElementById('inspector-title');
+            const descEl = document.getElementById('inspector-desc');
+            const box = document.getElementById('inspector-box');
+            titleEl.textContent = title;
+            descEl.textContent = desc;
+            box.classList.add('scale-[1.03]');
+            setTimeout(() => box.classList.remove('scale-[1.03]'), 200);
+        }
+
+        function updateSimulationParams() {
+            const s1 = parseFloat(document.getElementById('param-slider-1').value);
+            const s2 = parseFloat(document.getElementById('param-slider-2').value);
+            simParams.param1 = s1;
+            simParams.param2 = s2;
+
+            if (currentSceneIdx === 0) {
+                document.getElementById('slider-1-val').textContent = `${Math.round(s1)}%`;
+                document.getElementById('slider-2-val').textContent = `${Math.round(s2)}%`;
+            } else if (currentSceneIdx === 1) {
+                const angstroms = (0.8 + (s1 / 100) * 1.8).toFixed(2);
+                document.getElementById('slider-1-val').textContent = `${angstroms} Å`;
+                document.getElementById('slider-2-val').textContent = `${Math.round(s2)}%`;
+            } else {
+                const deg = Math.round((s1 / 100) * 90);
+                document.getElementById('slider-1-val').textContent = `${deg}°`;
+                document.getElementById('slider-2-val').textContent = `${Math.round(s2)}%`;
+            }
+
+            updateLiveTelemetryReadouts();
+            audioEngine.modulateFilter(s2 / 100);
+        }
+
+        function updateLiveTelemetryReadouts() {
+            const s1 = simParams.param1;
+            const s2 = simParams.param2;
+            const exc = simParams.telemetryExcitation; // 0.0 -> 1.0
+            const data = SCENES_DATA[currentSceneIdx];
+
+            // Update Status Banner & Excitation Percentage
+            const banner = document.getElementById('telemetry-status-banner');
+            const statusText = document.getElementById('telemetry-status-text');
+            const burstPct = document.getElementById('telemetry-burst-pct');
+            const oscContainer = document.getElementById('osc-container');
+            const mCard1 = document.getElementById('metric-card-1');
+            const mCard2 = document.getElementById('metric-card-2');
+            const mCard3 = document.getElementById('metric-card-3');
+
+            if (exc > 0.04) {
+                const pct = Math.round(exc * 100);
+                statusText.textContent = isKidsMode ? data.activeStatusKids : data.activeStatusSci;
+                statusText.style.color = data.accent;
+                burstPct.textContent = `${pct}% BURST`;
+                banner.style.borderColor = data.accent;
+                banner.style.backgroundColor = 'rgba(15, 23, 42, 0.95)';
+                oscContainer.style.borderColor = data.accent;
+                mCard1.style.borderColor = data.accent + '66';
+                mCard2.style.borderColor = data.accent + '66';
+                mCard3.style.borderColor = data.accent + '88';
+            } else {
+                statusText.textContent = isKidsMode ? '🟢 READY // CLICK BUTTON TO LAUNCH!' : 'IDLE // STEADY STATE';
+                statusText.style.color = '';
+                burstPct.textContent = 'STEADY';
+                banner.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                banner.style.backgroundColor = '';
+                oscContainer.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                mCard1.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                mCard2.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                mCard3.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+            }
+
+            if (currentSceneIdx === 0) {
+                const baseYield = 99.4 - s1 * 0.42;
+                const liveYield = Math.min(99.9, baseYield + exc * (99.9 - baseYield)).toFixed(1);
+                const states = exc > 0.25 ? 7 : Math.max(1, Math.round(7 - (s1 / 100) * 6));
+                const fluxMulti = (1.0 + (s2 / 100) * 1.5 + exc * 12.5).toFixed(1);
+
+                document.getElementById('metric-1-val').textContent = exc > 0.45 ? `${liveYield}% PEAK` : `${liveYield}%`;
+                document.getElementById('metric-2-val').textContent = exc > 0.35 ? `7 SYNCED!` : `${states} ${states === 1 ? 'STATE' : 'STATES'}`;
+                document.getElementById('metric-3-val').textContent = exc > 0.2 ? `${fluxMulti}x WAVE` : `${fluxMulti}x`;
+                document.getElementById('osc-freq').textContent = exc > 0.2 ? `${Math.round(612 + exc * 380)} THz ⚡` : data.oscFreq;
+            } else if (currentSceneIdx === 1) {
+                const baseProb = Math.max(1.2, 96 - s1 * 0.85 + s2 * 0.15);
+                const liveProb = Math.min(99.8, baseProb + exc * (99.8 - baseProb * 0.7)).toFixed(1);
+                const expPower = Math.round(14 - s1 * 0.08 + exc * 6);
+                const burstFlux = Math.round(1 + exc * 99);
+
+                document.getElementById('metric-1-val').textContent = exc > 0.4 ? `${liveProb}% BURST` : `${liveProb}%`;
+                document.getElementById('metric-2-val').textContent = `10^${expPower}x`;
+                document.getElementById('metric-3-val').textContent = exc > 0.15 ? `${burstFlux}x TUNNEL` : `1.0x BASE`;
+                document.getElementById('osc-freq').textContent = exc > 0.2 ? `K.I.E. ${(7.4 + exc * 11.2).toFixed(1)} ⚡` : data.oscFreq;
+            } else {
+                const deg = Math.round((s1 / 100) * 90);
+                const baseSinglet = 0.35 + 0.45 * Math.cos((deg * Math.PI) / 90);
+                const liveSinglet = Math.min(0.99, baseSinglet + exc * 0.35 * Math.sin(clock.getElapsedTime() * 14)).toFixed(2);
+
+                document.getElementById('metric-1-val').textContent = `Φ = ${liveSinglet}`;
+                document.getElementById('metric-2-val').textContent = exc > 0.25 ? 'BELL LOCK!' : (deg % 45 < 15 ? 'MAXIMAL' : 'COHERENT');
+                document.getElementById('metric-3-val').textContent = exc > 0.2 ? 'LOCKED 🧭' : 'STANDBY';
+                document.getElementById('osc-freq').textContent = exc > 0.2 ? `${(1.4 + exc * 4.8).toFixed(1)} MHz ⚡` : data.oscFreq;
+            }
+        }
+
+        function triggerQuantumPulse() {
+            simParams.pulseBoost = 1.0;
+            simParams.telemetryExcitation = 1.0;
+            simParams.pulseCount += 1;
+            simParams.pulseTimestamp = clock ? clock.getElapsedTime() : 0;
+
+            // Update Pulse Counter Badge
+            const countBadge = document.getElementById('pulse-counter-badge');
+            if (countBadge) {
+                countBadge.textContent = `PULSES: ${simParams.pulseCount}`;
+                countBadge.style.borderColor = SCENES_DATA[currentSceneIdx].accent;
+                countBadge.style.color = '#ffffff';
+            }
+
+            // Flash Telemetry Panel Border & Update Inspector Callout
+            const telPanel = document.getElementById('telemetry-panel');
+            if (telPanel) {
+                telPanel.classList.remove('telemetry-active-glow');
+                void telPanel.offsetWidth; // trigger reflow
+                telPanel.classList.add('telemetry-active-glow');
+            }
+
+            const pulseAnnouncements = [
+                {
+                    sciTitle: '⚡ FEMTOSECOND EXCITON WAVE-PACKET INJECTED',
+                    sciDesc: 'Constructive quantum interference locked across all 7 BChl-a chromophores! Observe the multi-channel gold/cyan shockwave on the oscilloscope.',
+                    kidTitle: '☀️ SUPER SUNLIGHT WAVE BLASTED!',
+                    kidDesc: 'Woohoo! Look at the Quantum Telemetry screen above—the glowing sunlight wave is surfing across all 7 islands at 99.9% power!'
+                },
+                {
+                    sciTitle: '⚡ SUBATOMIC PROTON TUNNELING EVENT DETECTED',
+                    sciDesc: 'De Broglie proton wave-packet penetrated the ΔG‡ activation barrier! Watch the green transmitted wave surge on the right side of the barrier.',
+                    kidTitle: '👻 PROTON TELEPORTED THROUGH THE WALL!',
+                    kidDesc: 'Boom! Look at the Telemetry wave monitor—the yellow wave smashed into the orange wall and burst out the green side like a ghost!'
+                },
+                {
+                    sciTitle: '⚡ CRYPTOCHROME-4 RADICAL PAIR EXCITED',
+                    sciDesc: 'Blue 450 nm photon created entangled [FAD•⁻ ... TrpH•⁺] radicals! Cyan |S⟩ and Pink |T₀⟩ quantum beat oscillations are now surging.',
+                    kidTitle: '🐦 FLASH! ROBIN’S QUANTUM COMPASS LOCKED!',
+                    kidDesc: 'Awesome! The blue light woke up the twin electrons! Watch the blue (Singlet) and pink (Triplet) waves dance together on the monitor!'
+                }
+            ];
+
+            const msg = pulseAnnouncements[currentSceneIdx];
+            inspectNode(isKidsMode ? msg.kidTitle : msg.sciTitle, isKidsMode ? msg.kidDesc : msg.sciDesc);
+
+            updateLiveTelemetryReadouts();
+            audioEngine.playQuantumPulseEffect(currentSceneIdx);
+        }
+
+        function toggleAutoOrbit() {
+            autoOrbit = !autoOrbit;
+            const btn = document.getElementById('autopilot-btn');
+            if (autoOrbit) {
+                btn.innerHTML = `<i class="ph-bold ph-video-camera"></i><span class="hidden lg:inline">ORBIT: AUTO</span>`;
+                btn.classList.add('text-teal-300');
+            } else {
+                btn.innerHTML = `<i class="ph-bold ph-hand-pointing"></i><span class="hidden lg:inline">ORBIT: MANUAL</span>`;
+                btn.classList.remove('text-teal-300');
+            }
+        }
+
+        /***********************************************************************
+         * 5. USER CAMERA INTERACTION & RAYCASTING
+         ***********************************************************************/
+        function setupInteractionListeners(domElement) {
+            domElement.addEventListener('pointerdown', (e) => {
+                isDragging = true;
+                prevMouse.x = e.clientX;
+                prevMouse.y = e.clientY;
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - prevMouse.x;
+                const dy = e.clientY - prevMouse.y;
+                prevMouse.x = e.clientX;
+                prevMouse.y = e.clientY;
+
+                targetSpherical.theta -= dx * 0.0065;
+                targetSpherical.phi = Math.max(0.35, Math.min(Math.PI - 0.35, targetSpherical.phi - dy * 0.0065));
+            });
+
+            window.addEventListener('pointerup', (e) => {
+                isDragging = false;
+            });
+
+            domElement.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                targetSpherical.radius = Math.max(11, Math.min(42, targetSpherical.radius + e.deltaY * 0.015));
+            }, { passive: false });
+
+            // Click Raycasting for 3D molecular objects
+            domElement.addEventListener('click', (e) => {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(interactableMeshes, false);
+                if (intersects.length > 0) {
+                    const hit = intersects[0].object;
+                    if (hit.userData && hit.userData.title) {
+                        inspectNode(hit.userData.title, hit.userData.desc);
+                        audioEngine.playHarmonicPing(784, 0.45, 'triangle');
+                    }
+                }
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /***********************************************************************
+         * 6. REAL-TIME 2D TELEMETRY OSCILLOSCOPE & ANIMATION LOOP
+         ***********************************************************************/
+        const telCanvas = document.getElementById('telemetry-canvas');
+        const telCtx = telCanvas ? telCanvas.getContext('2d') : null;
+
+        function renderTelemetryOscilloscope(elapsed) {
+            if (!telCtx) return;
+            const w = telCanvas.width = telCanvas.clientWidth;
+            const h = telCanvas.height = telCanvas.clientHeight;
+            telCtx.clearRect(0, 0, w, h);
+
+            const accent = SCENES_DATA[currentSceneIdx].accent;
+            const p1 = simParams.param1 / 100;
+            const p2 = simParams.param2 / 100;
+            const exc = simParams.telemetryExcitation; // 0.0 -> 1.0 on button click
+            const timeSincePulse = Math.max(0, elapsed - simParams.pulseTimestamp);
+
+            // Subtle reference baseline grid
+            telCtx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+            telCtx.lineWidth = 1;
+            telCtx.beginPath();
+            telCtx.moveTo(0, h / 2);
+            telCtx.lineTo(w, h / 2);
+            telCtx.stroke();
+
+            if (currentSceneIdx === 0) {
+                // SCENE 01: Photosynthesis Multi-Channel Exciton Superposition + Travelling Shockwave
+                if (exc > 0.03) {
+                    // Draw 3 ghost harmonic chromophore channels syncing up during pulse
+                    const subColors = ['rgba(250, 204, 21, 0.45)', 'rgba(56, 189, 248, 0.45)', 'rgba(16, 185, 129, 0.45)'];
+                    subColors.forEach((col, cIdx) => {
+                        telCtx.strokeStyle = col;
+                        telCtx.lineWidth = 1.5;
+                        telCtx.beginPath();
+                        for (let x = 0; x < w; x++) {
+                            const normX = x / w;
+                            const phaseShift = (cIdx - 1) * (1.2 * (1 - exc)); // converges to 0 phase at peak excitation!
+                            const packetCenter = (timeSincePulse * 0.85) % 1.2;
+                            const packetEnv = Math.exp(-Math.pow(normX - packetCenter, 2) / 0.045) * exc;
+                            const y = h / 2 + Math.sin(normX * 24 - elapsed * 10 + phaseShift) * (h * 0.22 * exc + packetEnv * h * 0.22);
+                            if (x === 0) telCtx.moveTo(x, y);
+                            else telCtx.lineTo(x, y);
+                        }
+                        telCtx.stroke();
+                    });
+                }
+
+                // Primary Coherent Exciton Wavefunction
+                telCtx.save();
+                telCtx.strokeStyle = exc > 0.25 ? '#fde047' : accent;
+                telCtx.lineWidth = 2 + exc * 1.8;
+                if (exc > 0.1) {
+                    telCtx.shadowColor = '#00f5d4';
+                    telCtx.shadowBlur = 12 * exc;
+                }
+                telCtx.beginPath();
+
+                let peakX = 0, peakY = h / 2;
+                const shockwavePos = (timeSincePulse * 0.75) % 1.1;
+
+                for (let x = 0; x < w; x++) {
+                    const normX = x / w;
+                    const decoherence = Math.max(0.05, p1 * (1 - exc * 0.9));
+                    const envelope = Math.exp(-normX * decoherence * 3.2);
+                    const shockEnv = Math.exp(-Math.pow(normX - shockwavePos, 2) / 0.035) * exc * 0.65;
+                    const freq = 18 + exc * 10;
+                    const speed = 4 + p2 * 5 + exc * 12;
+                    const wave = Math.sin(normX * freq - elapsed * speed) * Math.cos(normX * 7 + elapsed * (2 + exc * 4));
+                    const noise = (Math.random() - 0.5) * decoherence * 16;
+
+                    const amp = Math.min(h * 0.45, (envelope * 0.32 + shockEnv) * h * (1 + exc * 0.45));
+                    const y = h / 2 + wave * amp + noise;
+
+                    if (Math.abs(y - h / 2) > Math.abs(peakY - h / 2)) {
+                        peakY = y;
+                        peakX = x;
+                    }
+                    if (x === 0) telCtx.moveTo(x, y);
+                    else telCtx.lineTo(x, y);
+                }
+                telCtx.stroke();
+                telCtx.restore();
+
+                // Draw glowing peak marker dot during pulse
+                if (exc > 0.15) {
+                    telCtx.fillStyle = '#fde047';
+                    telCtx.beginPath();
+                    telCtx.arc(peakX, peakY, 3.5 + exc * 2, 0, Math.PI * 2);
+                    telCtx.fill();
+                }
+
+            } else if (currentSceneIdx === 1) {
+                // SCENE 02: Enzyme Proton Tunneling — Incident (Left), Barrier Wall (Middle), Transmitted Burst (Right)
+                const barrierLeft = Math.floor(w * 0.42);
+                const barrierRight = Math.floor(w * (0.48 + p1 * 0.14));
+
+                // Draw translucent Energy Barrier Zone on the oscilloscope
+                telCtx.fillStyle = exc > 0.2 ? `rgba(245, 158, 11, ${0.22 + exc * 0.25})` : 'rgba(245, 158, 11, 0.15)';
+                telCtx.fillRect(barrierLeft, 2, barrierRight - barrierLeft, h - 4);
+                telCtx.strokeStyle = 'rgba(251, 191, 36, 0.65)';
+                telCtx.lineWidth = 1;
+                telCtx.strokeRect(barrierLeft, 2, barrierRight - barrierLeft, h - 4);
+
+                // Incident + Evanescent Barrier Penetration Curve (Amber/Gold)
+                telCtx.save();
+                telCtx.strokeStyle = '#fbbf24';
+                telCtx.lineWidth = 2 + exc * 1.5;
+                if (exc > 0.1) {
+                    telCtx.shadowColor = '#f59e0b';
+                    telCtx.shadowBlur = 10 * exc;
+                }
+                telCtx.beginPath();
+                for (let x = 0; x <= barrierRight; x++) {
+                    const normX = x / w;
+                    let y = h / 2;
+                    if (x < barrierLeft) {
+                        const incAmp = (0.33 + exc * 0.12) * h;
+                        y = h / 2 + Math.sin(normX * 42 - elapsed * (9 + exc * 14)) * incAmp;
+                    } else {
+                        const barrierProgress = (x - barrierLeft) / Math.max(1, barrierRight - barrierLeft);
+                        const decayRate = Math.max(0.4, (1.8 + p1 * 3.2) * (1 - exc * 0.75));
+                        const decay = Math.exp(-barrierProgress * decayRate);
+                        const incAmp = (0.33 + exc * 0.12) * h;
+                        y = h / 2 + Math.sin((barrierLeft / w) * 42 - elapsed * (9 + exc * 14)) * decay * incAmp;
+                    }
+                    if (x === 0) telCtx.moveTo(x, y);
+                    else telCtx.lineTo(x, y);
+                }
+                telCtx.stroke();
+                telCtx.restore();
+
+                // Transmitted Tunneled Proton Wave (Bright Emerald Green on Right Side!)
+                telCtx.save();
+                telCtx.strokeStyle = exc > 0.15 ? '#34d399' : '#10b981';
+                telCtx.lineWidth = 2 + exc * 2.2;
+                if (exc > 0.1) {
+                    telCtx.shadowColor = '#10b981';
+                    telCtx.shadowBlur = 14 * exc;
+                }
+                telCtx.beginPath();
+                const baseTrans = Math.exp(-(0.12 + p1 * 0.25) * 6.5);
+                const liveTransAmp = Math.min(0.45, baseTrans * 0.35 + exc * 0.38) * h;
+
+                for (let x = barrierRight; x < w; x++) {
+                    const normX = x / w;
+                    const y = h / 2 + Math.sin(normX * 42 - elapsed * (9 + exc * 14)) * liveTransAmp;
+                    if (x === barrierRight) telCtx.moveTo(x, y);
+                    else telCtx.lineTo(x, y);
+                }
+                telCtx.stroke();
+                telCtx.restore();
+
+            } else {
+                // SCENE 03: Avian Magnetoreception — Dual Singlet |S⟩ (Cyan) & Triplet |T0⟩ (Magenta) Quantum Beats
+                const beatFreq = 10 + p1 * 16 + exc * 10;
+                const modFreq = 4 + p2 * 8 + exc * 8;
+                const ampScale = (0.32 + exc * 0.14) * h;
+
+                // Triplet |T0⟩ Wave (Magenta / Rose Partner Curve)
+                telCtx.save();
+                telCtx.strokeStyle = '#f43f5e';
+                telCtx.lineWidth = 1.6 + exc * 1.6;
+                if (exc > 0.15) {
+                    telCtx.shadowColor = '#f43f5e';
+                    telCtx.shadowBlur = 10 * exc;
+                }
+                telCtx.beginPath();
+                for (let x = 0; x < w; x++) {
+                    const normX = x / w;
+                    const tripletBeat = Math.cos(normX * beatFreq - elapsed * (4 + exc * 10)) * Math.sin(normX * modFreq + elapsed * (2 + exc * 5));
+                    const y = h / 2 + tripletBeat * ampScale;
+                    if (x === 0) telCtx.moveTo(x, y);
+                    else telCtx.lineTo(x, y);
+                }
+                telCtx.stroke();
+                telCtx.restore();
+
+                // Singlet |S⟩ Wave (Cyan / Indigo Primary Curve)
+                telCtx.save();
+                telCtx.strokeStyle = exc > 0.2 ? '#38bdf8' : accent;
+                telCtx.lineWidth = 2 + exc * 1.8;
+                if (exc > 0.15) {
+                    telCtx.shadowColor = '#38bdf8';
+                    telCtx.shadowBlur = 12 * exc;
+                }
+                telCtx.beginPath();
+                for (let x = 0; x < w; x++) {
+                    const normX = x / w;
+                    const singletBeat = Math.sin(normX * beatFreq - elapsed * (4 + exc * 10)) * Math.cos(normX * modFreq + elapsed * (2 + exc * 5));
+                    const y = h / 2 + singletBeat * ampScale;
+                    if (x === 0) telCtx.moveTo(x, y);
+                    else telCtx.lineTo(x, y);
+                }
+                telCtx.stroke();
+                telCtx.restore();
+            }
+        }
+
+        function update3DProjectedLabels() {
+            const halfW = window.innerWidth / 2;
+            const halfH = window.innerHeight / 2;
+
+            activeLabelElements.forEach(({ element, worldPos }) => {
+                const projected = worldPos.clone().project(camera);
+                // Hide if behind camera
+                if (projected.z > 1) {
+                    element.style.opacity = '0';
+                    return;
+                }
+                const x = (projected.x * halfW) + halfW;
+                const y = -(projected.y * halfH) + halfH;
+                element.style.opacity = '1';
+                element.style.left = `${x}px`;
+                element.style.top = `${y}px`;
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.1);
+            const elapsed = clock.getElapsedTime();
+
+            // Decay 3D pulse boost and ~3.5s Telemetry Excitation envelope smoothly
+            if (simParams.pulseBoost > 0) {
+                simParams.pulseBoost = Math.max(0, simParams.pulseBoost - dt * 1.4);
+            }
+            if (simParams.telemetryExcitation > 0) {
+                simParams.telemetryExcitation = Math.max(0, simParams.telemetryExcitation - dt * 0.28);
+                updateLiveTelemetryReadouts();
+            }
+
+            // Camera Orbit & Smooth Damping
+            if (autoOrbit && !isDragging) {
+                targetSpherical.theta += dt * 0.16;
+            }
+            camSpherical.radius += (targetSpherical.radius - camSpherical.radius) * 0.08;
+            camSpherical.theta += (targetSpherical.theta - camSpherical.theta) * 0.08;
+            camSpherical.phi += (targetSpherical.phi - camSpherical.phi) * 0.08;
+
+            camera.position.x = camSpherical.radius * Math.sin(camSpherical.phi) * Math.sin(camSpherical.theta);
+            camera.position.y = camSpherical.radius * Math.cos(camSpherical.phi);
+            camera.position.z = camSpherical.radius * Math.sin(camSpherical.phi) * Math.cos(camSpherical.theta);
+            camera.lookAt(0, 0, 0);
+
+            // Rotate background subatomic dust
+            const dust = scene.getObjectByName('backgroundDust');
+            if (dust) {
+                dust.rotation.y = elapsed * 0.03;
+                dust.rotation.x = Math.sin(elapsed * 0.05) * 0.1;
+            }
+
+            // Animate Active Quantum Biology Scene
+            const p1 = simParams.param1 / 100; // 0..1
+            const p2 = simParams.param2 / 100; // 0..1
+            const boost = simParams.pulseBoost;
+
+            if (currentSceneIdx === 0) {
+                // SCENE 0: FMO Photosynthesis Coherence
+                const coherenceFactor = 1.0 - p1 * 0.85;
+                fmoData.chromophores.forEach((node, idx) => {
+                    node.ringMesh.rotation.z += dt * (0.8 + p2);
+                    // Coherent synchronous breathing vs noisy jitter
+                    const syncWave = Math.sin(elapsed * 3.5 - idx * 0.5) * coherenceFactor;
+                    const scale = node.baseScale + syncWave * 0.18 + boost * 0.4;
+                    node.coreMesh.scale.setScalar(scale);
+
+                    if (p1 > 0.3) {
+                        node.group.position.x = node.pos.x + (Math.random() - 0.5) * p1 * 0.25;
+                        node.group.position.y = node.pos.y + (Math.random() - 0.5) * p1 * 0.25;
+                    } else {
+                        node.group.position.copy(node.pos);
+                    }
+                });
+
+                fmoData.auraSprites.forEach((sp, idx) => {
+                    const s = (3.0 + coherenceFactor * 3.2 + boost * 3.0) + Math.sin(elapsed * 4 + idx) * 0.5;
+                    sp.scale.set(s, s, 1);
+                    sp.material.opacity = 0.2 + coherenceFactor * 0.5;
+                });
+
+                fmoData.wavePackets.forEach((pkt) => {
+                    pkt.t = (pkt.t + dt * pkt.speed * (0.6 + p2 * 1.4 + boost * 2.5)) % 1;
+                    const pt = pkt.curve.getPointAt(pkt.t);
+                    pkt.sprite.position.copy(pt);
+                    pkt.lineMat.opacity = 0.15 + coherenceFactor * 0.45 + boost * 0.4;
+                });
+
+            } else if (currentSceneIdx === 1) {
+                // SCENE 1: Enzymatic Proton Tunneling
+                const barrierWidth = 0.8 + p1 * 2.4;
+                tunnelData.barrierMesh.scale.x = barrierWidth;
+
+                // Vibrate Donor & Acceptor closer with high thermal vibration (p2)
+                const vib = Math.sin(elapsed * (6 + p2 * 10)) * (0.3 + p2 * 0.9);
+                tunnelData.donorNode.position.x = -7.0 + vib + boost * 1.2;
+                tunnelData.acceptorNode.position.x = 7.0 - vib - boost * 1.2;
+
+                // Deform 3D Potential Energy Surface
+                const posAttr = tunnelData.surfaceGeo.attributes.position;
+                for (let i = 0; i < posAttr.count; i++) {
+                    const x = posAttr.getX(i);
+                    const z = posAttr.getZ(i);
+                    // Double-well potential with central Gaussian barrier
+                    const barrierPeak = 5.2 * Math.exp(-(x * x) / (barrierWidth * 1.5));
+                    const wells = -1.8 * Math.exp(-Math.pow(Math.abs(x) - 6.5, 2) / 5.0);
+                    const ripple = Math.sin(x * 1.5 - elapsed * 4) * 0.18 * (1 + boost * 2);
+                    posAttr.setY(i, barrierPeak + wells + ripple - (z * z) * 0.04);
+                }
+                posAttr.needsUpdate = true;
+
+                // Update Proton Wave-Packets tunneling across the barrier
+                tunnelData.packets.forEach((pkt) => {
+                    pkt.phase = (pkt.phase + dt * (0.28 + p2 * 0.35 + boost * 0.8)) % 1;
+                    const x = -8.5 + pkt.phase * 17.0;
+                    const y = 0.5 + Math.sin(pkt.phase * Math.PI * 6 + elapsed * 8 + pkt.yPhase) * 0.65;
+                    pkt.sprite.position.set(x, y, pkt.zOffset);
+
+                    // Attenuate amplitude inside and after the barrier based on barrier width
+                    const transmission = Math.exp(-p1 * 1.6);
+                    if (x > -barrierWidth && x < barrierWidth) {
+                        pkt.sprite.material.opacity = 0.45;
+                        pkt.sprite.scale.setScalar(1.4);
+                    } else if (x >= barrierWidth) {
+                        pkt.sprite.material.opacity = Math.min(1, transmission + boost * 0.6);
+                        pkt.sprite.scale.setScalar(1.2 + transmission * 1.4 + boost);
+                    } else {
+                        pkt.sprite.material.opacity = 0.9;
+                        pkt.sprite.scale.setScalar(2.3);
+                    }
+                });
+
+            } else if (currentSceneIdx === 2) {
+                // SCENE 2: Avian Cryptochrome Radical Pair Compass
+                const incAngle = p1 * (Math.PI / 2); // 0 to 90 deg inclination
+                avianData.compassRing.rotation.z = incAngle * 0.65;
+                avianData.compassRing.rotation.y = elapsed * 0.15;
+
+                // Larmor Precession of Entangled Radical Spins
+                const larmorSpeed = 2.5 + p2 * 5.0 + boost * 8.0;
+                avianData.arrow1.rotation.z = Math.sin(elapsed * larmorSpeed) * 0.65 + incAngle * 0.4;
+                avianData.arrow1.rotation.x = Math.cos(elapsed * larmorSpeed) * 0.65;
+
+                // Singlet (antiparallel) vs Triplet (parallel) phase oscillation
+                const singletPhase = Math.sin(elapsed * (1.5 + p1 * 3.0));
+                avianData.arrow2.rotation.z = -avianData.arrow1.rotation.z * singletPhase;
+                avianData.arrow2.rotation.x = avianData.arrow1.rotation.x * singletPhase;
+
+                // Update Entanglement Bridge Particles
+                const bridgeAttr = avianData.bridgeParticles.geometry.attributes.position;
+                for (let i = 0; i < bridgeAttr.count; i++) {
+                    const t = i / (bridgeAttr.count - 1);
+                    const x = -4.5 + t * 9.0;
+                    const envelope = Math.sin(t * Math.PI);
+                    const waveY = Math.sin(t * 12 - elapsed * 6) * envelope * (1.2 + singletPhase * 0.8 + boost * 1.5);
+                    const waveZ = Math.cos(t * 12 - elapsed * 6) * envelope * (1.2 + singletPhase * 0.8 + boost * 1.5);
+                    bridgeAttr.setXYZ(i, x, waveY, waveZ);
+                }
+                bridgeAttr.needsUpdate = true;
+            }
+
+            // Update 2D Telemetry & 3D Floating Node Labels
+            renderTelemetryOscilloscope(elapsed);
+            update3DProjectedLabels();
+
+            renderer.render(scene, camera);
+        }
+
+        /***********************************************************************
+         * 7. INITIALIZATION ON WINDOW LOAD
+         ***********************************************************************/
+        window.onload = function () {
+            initThreeJS();
+            refreshSceneUI();
+            renderGlossaryItems();
+            animate();
+
+            // Close Glossary on Escape key
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') toggleGlossary(false);
+            });
+
+            // Splash Modal Buttons
+            const introModal = document.getElementById('intro-modal');
+            document.getElementById('start-experience-btn').addEventListener('click', () => {
+                audioEngine.enable();
+                audioEngine.playQuantumPulseEffect(0);
+                introModal.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => introModal.style.display = 'none', 700);
+            });
+
+            document.getElementById('start-muted-btn').addEventListener('click', () => {
+                updateAudioUI(false);
+                introModal.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => introModal.style.display = 'none', 700);
+            });
+        };
+    </script>
+</body>
+</html>
